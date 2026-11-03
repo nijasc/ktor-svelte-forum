@@ -128,5 +128,15 @@
   "verify_notice": "Bestätige deine E-Mail-Adresse, um Themen zu starten und zu antworten.",
   "verify_notice_link": "Zu deinem Konto",
   "have_account": "Ich habe schon ein Konto",
-  "sign_in_instead": "Anmelden"
+  "sign_in_instead": "Anmelden",
+  "nav_notifications": "Benachrichtigungen",
+  "notifications_title": "Benachrichtigungen",
+  "notifications_empty": "Nichts Neues.",
+  "notif_reply": "{actor} hat in {thread} geantwortet",
+  "notif_reply_many": "{count} neue Antworten in {thread}",
+  "notif_mention": "{actor} hat dich in {thread} erwähnt",
+  "mark_all_read": "Alle als gelesen markieren",
+  "watch": "Beobachten",
+  "unwatch": "Nicht mehr beobachten",
+  "watching": "Beobachtet"
 }

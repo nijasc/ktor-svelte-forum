@@ -349,6 +349,106 @@
                 }
             }
         },
+        "/api/notifications": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationPage"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read": {
+            "post": {
+                "summary": "",
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/unread": {
+            "get": {
+                "summary": "",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnreadCount"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "post": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
         "/api/posts/{id}": {
             "delete": {
                 "summary": "",
@@ -1123,6 +1223,84 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Post"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/threads/{id}/watch": {
+            "put": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "delete": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WatchState"
                                 }
                             }
                         }
@@ -1959,6 +2137,103 @@
                             "string",
                             "null"
                         ]
+                    }
+                }
+            },
+            "NotificationView": {
+                "type": "object",
+                "title": "NotificationView",
+                "required": [
+                    "id",
+                    "kind",
+                    "actor",
+                    "threadId",
+                    "threadTitle",
+                    "postId",
+                    "count",
+                    "read",
+                    "createdAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "reply",
+                            "mention"
+                        ]
+                    },
+                    "actor": {
+                        "type": "string"
+                    },
+                    "threadId": {
+                        "type": "integer"
+                    },
+                    "threadTitle": {
+                        "type": "string"
+                    },
+                    "postId": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer"
+                    },
+                    "read": {
+                        "type": "boolean"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "NotificationPage": {
+                "type": "object",
+                "title": "NotificationPage",
+                "required": [
+                    "items",
+                    "unread"
+                ],
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NotificationView"
+                        }
+                    },
+                    "next": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "unread": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "UnreadCount": {
+                "type": "object",
+                "title": "UnreadCount",
+                "required": [
+                    "count"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "WatchState": {
+                "type": "object",
+                "title": "WatchState",
+                "required": [
+                    "watching"
+                ],
+                "properties": {
+                    "watching": {
+                        "type": "boolean"
                     }
                 }
             }

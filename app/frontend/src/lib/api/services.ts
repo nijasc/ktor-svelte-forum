@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, ChangeEmail, Credentials, CurrentUser, ForgotPassword, Greeting, MoveThread, NewCategory, NewPost, NewReport, NewThread, Post, Problem, Profile, Registration, ReportPage, ResetPassword, ResolveReport, RoleChange, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UpdateCategory, VerifyEmail } from './types.js';
+import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, ChangeEmail, Credentials, CurrentUser, ForgotPassword, Greeting, MoveThread, NewCategory, NewPost, NewReport, NewThread, NotificationPage, Post, Problem, Profile, Registration, ReportPage, ResetPassword, ResolveReport, RoleChange, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UnreadCount, UpdateCategory, VerifyEmail, WatchState } from './types.js';
 
 export const auth = {
     putEmail: (body: ChangeEmail, options?: RequestOptions) => request<CurrentUser>('PUT', '/api/auth/email', { ...options, body, operation: 'auth.putEmail' }),
@@ -21,6 +21,13 @@ export const categories = {
 
 export const hello = {
     list: (options?: RequestOptions) => request<Greeting>('GET', '/api/hello', { ...options, operation: 'hello.list' }),
+};
+
+export const notifications = {
+    list: (query?: { cursor?: string; limit?: string }, options?: RequestOptions) => request<NotificationPage>('GET', '/api/notifications', { ...options, query, operation: 'notifications.list' }),
+    read: (options?: RequestOptions) => request<void>('POST', '/api/notifications/read', { ...options, operation: 'notifications.read' }),
+    getUnread: (options?: RequestOptions) => request<UnreadCount>('GET', '/api/notifications/unread', { ...options, operation: 'notifications.getUnread' }),
+    readId: (id: string | number, options?: RequestOptions) => request<void>('POST', `/api/notifications/${encodeURIComponent(id)}/read`, { ...options, operation: 'notifications.readId' }),
 };
 
 export const posts = {
@@ -55,6 +62,9 @@ export const staff = {
 export const threads = {
     get: (id: string | number, query?: { limit?: string; cursor?: string }, options?: RequestOptions) => request<ThreadDetail>('GET', `/api/threads/${encodeURIComponent(id)}`, { ...options, query, operation: 'threads.get' }),
     posts: (id: string | number, body: NewPost, options?: RequestOptions) => request<Post>('POST', `/api/threads/${encodeURIComponent(id)}/posts`, { ...options, body, operation: 'threads.posts' }),
+    getWatch: (id: string | number, options?: RequestOptions) => request<WatchState>('GET', `/api/threads/${encodeURIComponent(id)}/watch`, { ...options, operation: 'threads.getWatch' }),
+    putWatch: (id: string | number, options?: RequestOptions) => request<void>('PUT', `/api/threads/${encodeURIComponent(id)}/watch`, { ...options, operation: 'threads.putWatch' }),
+    deleteWatch: (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/threads/${encodeURIComponent(id)}/watch`, { ...options, operation: 'threads.deleteWatch' }),
 };
 
 export const users = {
@@ -78,4 +88,4 @@ export function isApiError<K extends keyof ApiErrors>(error: unknown, operation:
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
 }
 
-export const api = { auth, categories, hello, posts, staff, threads, users };
+export const api = { auth, categories, hello, notifications, posts, staff, threads, users };

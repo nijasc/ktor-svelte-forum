@@ -128,5 +128,15 @@
   "verify_notice": "Confirm your email address to start threads and reply.",
   "verify_notice_link": "Go to your account",
   "have_account": "I already have an account",
-  "sign_in_instead": "Sign in"
+  "sign_in_instead": "Sign in",
+  "nav_notifications": "Notifications",
+  "notifications_title": "Notifications",
+  "notifications_empty": "Nothing new.",
+  "notif_reply": "{actor} replied in {thread}",
+  "notif_reply_many": "{count} new replies in {thread}",
+  "notif_mention": "{actor} mentioned you in {thread}",
+  "mark_all_read": "Mark all as read",
+  "watch": "Watch",
+  "unwatch": "Stop watching",
+  "watching": "Watching"
 }

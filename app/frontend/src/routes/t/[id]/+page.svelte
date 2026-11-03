@@ -118,6 +118,22 @@
 
     let actionError = $state('');
     let notice = $state('');
+    let watching = $state(false);
+
+    async function loadWatch(threadId: string) {
+        watching = session.user ? (await api.threads.getWatch(threadId).catch(() => null))?.watching === true : false;
+    }
+
+    async function toggleWatch() {
+        actionError = '';
+        try {
+            if (watching) await api.threads.deleteWatch(id);
+            else await api.threads.putWatch(id);
+            watching = !watching;
+        } catch (failure) {
+            actionError = errorMessage(failure);
+        }
+    }
 
     /** Runs a moderation or reporting action, then shows the result. [reload] fetches the thread again afterwards. */
     async function act(action: () => Promise<unknown>, reload = true) {
@@ -163,6 +179,10 @@
     $effect(() => {
         load(id);
     });
+
+    $effect(() => {
+        if (session.ready) loadWatch(id);
+    });
 </script>
 
 <svelte:head><title>{thread?.title ?? m.loading()}</title></svelte:head>
@@ -182,6 +202,12 @@
         <p class="mb-4 text-sm opacity-70">
             {m.byAuthor({ author: thread.author })} · {formatReplies(thread.replyCount)}
         </p>
+
+        {#if session.user}
+            <button class="btn btn-sm mb-4" class:btn-primary={watching} onclick={toggleWatch} aria-pressed={watching}>
+                {watching ? m.watching() : m.watch()}
+            </button>
+        {/if}
 
         {#if isStaff(session.user)}
             <div class="mb-4 flex flex-wrap gap-2">

@@ -91,6 +91,24 @@ export interface NewThread {
     body: string;
 }
 
+export interface NotificationPage {
+    items: NotificationView[];
+    next?: string | null;
+    unread: number;
+}
+
+export interface NotificationView {
+    id: number;
+    kind: 'reply' | 'mention';
+    actor: string;
+    threadId: number;
+    threadTitle: string;
+    postId: number;
+    count: number;
+    read: boolean;
+    createdAt: string;
+}
+
 export interface Post {
     id: number;
     author: string;
@@ -201,6 +219,10 @@ export interface ThreadSummary {
     locked?: boolean;
 }
 
+export interface UnreadCount {
+    count: number;
+}
+
 export interface UpdateCategory {
     title?: string | null;
     description?: string | null;
@@ -209,4 +231,8 @@ export interface UpdateCategory {
 
 export interface VerifyEmail {
     token: string;
+}
+
+export interface WatchState {
+    watching: boolean;
 }
