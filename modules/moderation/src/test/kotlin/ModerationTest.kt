@@ -5,6 +5,7 @@ import dev.nilsschlegel.forum.core.configureErrors
 import dev.nilsschlegel.forum.core.configureRateLimits
 import dev.nilsschlegel.forum.database.TestDatabase
 import dev.nilsschlegel.forum.forum.forum
+import dev.nilsschlegel.forum.mail.LogMailSender
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.get
@@ -39,7 +40,7 @@ class ModerationTest {
             install(ContentNegotiation) { json() }
             configureErrors()
             configureRateLimits(authPerMinute = 1_000, writePerMinute = 1_000)
-            val accounts = accounts(secureCookie = false, initialAdmin = null)
+            val accounts = accounts(LogMailSender(), secureCookie = false, initialAdmin = null)
             val forum = forum(accounts)
             moderation(accounts, forum)
         }
@@ -51,8 +52,14 @@ class ModerationTest {
         role: String = "member",
     ): HttpClient {
         val client = createClient { install(HttpCookies) }
-        val response = client.send("POST", "/api/auth/register", """{"username":"$name","password":"$PASSWORD"}""")
+        val response =
+            client.send(
+                "POST",
+                "/api/auth/register",
+                """{"username":"$name","password":"$PASSWORD","email":"$name@example.com"}""",
+            )
         assertEquals(HttpStatusCode.Created, response.status)
+        TestDatabase.execute("UPDATE users SET email_verified_at = now() WHERE username = '$name'")
         if (role != "member") TestDatabase.execute("UPDATE users SET role = '$role' WHERE username = '$name'")
         return client
     }

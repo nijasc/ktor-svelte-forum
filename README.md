@@ -59,6 +59,7 @@ The app reads the environment first, then a `.env` file in the working directory
 | `COOKIE_SECURE` | Send the session cookie over HTTPS only. Defaults to `true`, so set `false` only for local HTTP |
 | `DATABASE_URL` | JDBC URL of the Postgres database |
 | `INITIAL_ADMIN` | The username that becomes an admin when it signs up, as long as there is no admin yet. Leave empty for none |
+| `PUBLIC_URL` | The address of the site, which links in emails point to. `http://localhost:8080` by default |
 | `MAIL_PROVIDER` | `log` writes emails to the log, which is the default and needs no account. `resend` sends through Resend |
 | `RESEND_API_KEY`, `MAIL_FROM` | Needed when `MAIL_PROVIDER` is `resend`. `MAIL_FROM` looks like `Forum <forum@example.com>` |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Used by `compose.yaml` and by the app |
@@ -101,7 +102,19 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 
 ## Sign in
 
-`modules/accounts/.../Auth.kt` has the register, login, logout and current user routes, with passwords hashed by PBKDF2. To require a signed-in user in any module, wrap routes in `authenticate(SESSION_AUTH)` and read `call.principal<UserSession>()`. Registration is open. Register and login are limited to 10 requests a minute per client address, and starting threads and replying to 20 a minute per user, set in `modules/core/.../RateLimits.kt`. A client over the limit gets 429. Behind a reverse proxy every client shares one address until forwarded headers are set up. The pages in `app/frontend/src/routes/login` and `app/frontend/src/routes/account` use `app/frontend/src/lib/auth.ts`.
+`modules/accounts/.../Auth.kt` has the register, login, logout and current user routes, with passwords hashed by PBKDF2. To require a signed-in user in any module, wrap routes in `authenticate(SESSION_AUTH)` and read `call.principal<AuthUser>()`. Registration is open. Register and login are limited to 10 requests a minute per client address, and starting threads and replying to 20 a minute per user, set in `modules/core/.../RateLimits.kt`. A client over the limit gets 429. Behind a reverse proxy every client shares one address until forwarded headers are set up. The pages in `app/frontend/src/routes/login` and `app/frontend/src/routes/account` use the generated client.
+
+An email address is needed to sign up, and it has to be confirmed before someone can start a thread, reply or report a post. Call `call.requireVerified()` for any route that creates content. Accounts that existed before this rule count as confirmed, and so does the first admin made with `INITIAL_ADMIN`.
+
+| Route | Purpose |
+|---|---|
+| `POST /api/auth/verify` | Confirm an address with the token from the email |
+| `POST /api/auth/verification/resend` | Send a new confirmation link. The old one stops working |
+| `POST /api/auth/forgot-password` | Email a reset link. The answer is the same for unknown addresses |
+| `POST /api/auth/reset-password` | Set a new password with the token. Every session started before it ends |
+| `PUT /api/auth/email` | Change the address with the current password. It needs confirming again |
+
+Links in emails are one-time and the database keeps only a hash of each token. A confirmation link works for 3 days and a reset link for 1 hour. With `MAIL_PROVIDER=log`, which is the default, emails are written to the log, so in development copy the link from there. Failing to send mail never fails a request, and the user can ask again.
 
 ## Forum
 

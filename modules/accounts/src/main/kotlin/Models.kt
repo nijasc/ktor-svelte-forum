@@ -45,6 +45,8 @@ data class AuthUser(
     override val id: Long,
     val username: String,
     val role: Role,
+    /** Whether the user has confirmed their email address. Writing needs it, see [requireVerified]. */
+    val verified: Boolean,
 ) : Actor
 
 /** Looks up users, so other modules can show who wrote something without reading the users table. */
@@ -91,22 +93,51 @@ internal data class UserRecord(
     val role: Role,
     val status: UserStatus,
     val createdAt: Instant,
+    val email: String?,
+    val emailVerified: Boolean,
+    val passwordChangedAt: Instant?,
 ) {
-    fun toAuthUser() = AuthUser(id, username, role)
+    fun toAuthUser() = AuthUser(id, username, role, emailVerified)
 
     fun toSummary() = UserSummary(id, username, role, status)
 }
 
 internal interface UserStore {
-    /** Returns the new user, or null if the username is taken (ignoring case). */
     suspend fun create(
         username: String,
+        email: String,
         passwordHash: String,
-    ): UserRecord?
+    ): CreateResult
 
     suspend fun findByUsername(username: String): UserRecord?
 
     suspend fun findById(id: Long): UserRecord?
+
+    suspend fun findByEmail(email: String): UserRecord?
+
+    suspend fun markVerified(userId: Long)
+
+    /** Sets a new address and takes the verified mark away. Returns false if another user has the address. */
+    suspend fun changeEmail(
+        userId: Long,
+        email: String,
+    ): Boolean
+
+    /** Sets a new password and records when, which signs out every session started before. */
+    suspend fun setPassword(
+        userId: Long,
+        passwordHash: String,
+    )
+}
+
+internal sealed interface CreateResult {
+    data class Created(
+        val user: UserRecord,
+    ) : CreateResult
+
+    data object UsernameTaken : CreateResult
+
+    data object EmailTaken : CreateResult
 }
 
 /** What anyone may see about a user. */

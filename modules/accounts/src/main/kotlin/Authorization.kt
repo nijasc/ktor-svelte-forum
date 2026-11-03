@@ -25,3 +25,13 @@ fun canBan(
         Role.MODERATOR -> actor >= Role.ADMIN
         Role.ADMIN -> false
     }
+
+/**
+ * Like [requireRole] for a plain member, and the email address must be confirmed too. Use it for anything that
+ * creates content, which keeps throwaway accounts with made-up addresses from posting.
+ */
+fun ApplicationCall.requireVerified(): AuthUser {
+    val user = requireRole(Role.MEMBER)
+    if (!user.verified) throw ApiException(HttpStatusCode.Forbidden, "Confirm your email address first.")
+    return user
+}

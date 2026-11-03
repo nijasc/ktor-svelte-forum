@@ -87,7 +87,7 @@ Do this before building pages, while there is no data to migrate.
 
 ### Phase 3: keeping people coming back
 
-- [ ] Email verification and password reset (needs a mail sender, see open decisions)
+- [x] Email verification and password reset. Email is required to sign up and has to be confirmed to post, which also slows down throwaway accounts
 - [ ] Notifications for replies and mentions, with an unread count (`notifications` module)
 - [ ] Watch a thread
 - [ ] Reactions on posts
@@ -150,7 +150,7 @@ Migrations follow the README rule: shared version numbers, one file per change. 
 |---|---|---|
 | Markdown rendering | Render on the server and store HTML, or store Markdown and render in the browser | Store Markdown, render in the browser with a sanitiser. Keeps the source editable |
 | Ids in URLs | Numeric, or numeric plus a slug (`/t/42-title`) | Numeric plus slug for readable links |
-| Email sending | SMTP, or a provider such as Resend | Provider behind the `mail` interface |
+| Email sending | SMTP, or a provider such as Resend | Decided: a `MailSender` interface, with a log sender for development and Resend over its HTTP API. SMTP can be added as another implementation |
 | Who can register | Open, invite only, or approval | Open with rate limits, with a setting to close it |
 | Can moderators edit posts | Edit, or only hide | Decided: hide only. Moderators never put words in someone else's mouth |
 | Bans | Permanent, or timed | Decided: permanent until lifted, with the reason in the audit log. Timed suspensions can come later |

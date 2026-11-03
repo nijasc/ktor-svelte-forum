@@ -7,6 +7,7 @@ import dev.nilsschlegel.forum.accounts.SESSION_AUTH
 import dev.nilsschlegel.forum.accounts.UserStatus
 import dev.nilsschlegel.forum.accounts.canBan
 import dev.nilsschlegel.forum.accounts.requireRole
+import dev.nilsschlegel.forum.accounts.requireVerified
 import dev.nilsschlegel.forum.core.ApiException
 import dev.nilsschlegel.forum.core.RateLimits
 import dev.nilsschlegel.forum.forum.ForumStaff
@@ -38,7 +39,7 @@ internal fun Route.reportRoutes(
     authenticate(SESSION_AUTH) {
         rateLimit(RateLimits.WRITE) {
             post("/api/posts/{id}/reports") {
-                val user = call.requireRole(Role.MEMBER)
+                val user = call.requireVerified()
                 val postId = call.id()
                 val new = call.receive<NewReport>()
                 forum.post(postId) ?: throw NotFoundException()

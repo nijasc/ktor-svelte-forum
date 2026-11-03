@@ -3,6 +3,7 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
 import dev.nilsschlegel.forum.accounts.UserDirectory
+import dev.nilsschlegel.forum.accounts.requireVerified
 import dev.nilsschlegel.forum.core.ApiException
 import dev.nilsschlegel.forum.core.RateLimits
 import io.ktor.http.HttpStatusCode
@@ -54,12 +55,13 @@ internal fun Route.forumRoutes(
                 post("/categories/{slug}/threads") {
                     val new = call.receive<NewThread>()
                     val thread =
-                        forum.createThread(call.slug(), call.userId(), new.title.trim(), new.body.trim()) ?: throw NotFoundException()
+                        forum.createThread(call.slug(), call.requireVerified().id, new.title.trim(), new.body.trim())
+                            ?: throw NotFoundException()
                     call.respond(HttpStatusCode.Created, thread)
                 }
                 post("/threads/{id}/posts") {
                     val new = call.receive<NewPost>()
-                    when (val result = forum.reply(call.threadId(), call.userId(), new.body.trim())) {
+                    when (val result = forum.reply(call.threadId(), call.requireVerified().id, new.body.trim())) {
                         is ReplyResult.Done -> call.respond(HttpStatusCode.Created, result.post)
                         ReplyResult.NotFound -> throw NotFoundException()
                         ReplyResult.Locked -> throw ApiException(HttpStatusCode.Locked, "This thread is locked.")

@@ -6,6 +6,7 @@ import dev.nilsschlegel.forum.core.configureRateLimits
 import dev.nilsschlegel.forum.core.env
 import dev.nilsschlegel.forum.database.configureDatabase
 import dev.nilsschlegel.forum.forum.forum
+import dev.nilsschlegel.forum.mail.mailSenderFromEnv
 import dev.nilsschlegel.forum.moderation.moderation
 import io.github.nijasc.ktor.svelte.Svelte
 import io.ktor.server.application.Application
@@ -39,7 +40,7 @@ fun Application.module() {
     configureErrors()
     configureRateLimits()
     configureDatabase()
-    val accounts = accounts()
+    val accounts = accounts(mailSenderFromEnv())
     val forum = forum(accounts)
     moderation(accounts, forum)
 

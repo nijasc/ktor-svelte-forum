@@ -165,7 +165,7 @@ private class TestAuth(
 
     override suspend fun onAuthenticate(context: AuthenticationContext) {
         if (context.call.request.headers["X-Anonymous"] == null) {
-            context.principal(AuthUser(1, "alice", Role.MEMBER))
+            context.principal(AuthUser(1, "alice", Role.MEMBER, verified = true))
         } else {
             context.challenge("test", AuthenticationFailedCause.NoCredentials) { challenge, call ->
                 call.respond(HttpStatusCode.Unauthorized)
