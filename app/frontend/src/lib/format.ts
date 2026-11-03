@@ -1,4 +1,4 @@
-import { getLocale } from '#i18n';
+import { getLocale, m } from '#i18n';
 
 /** A date and time in the reader's language, from the ISO text the API returns. */
 export function formatDateTime(iso: string): string {
@@ -20,4 +20,9 @@ export function formatAgo(iso: string): string {
         if (Math.abs(seconds) >= size) return format.format(Math.round(seconds / size), unit);
     }
     return format.format(Math.min(seconds, 0), 'second');
+}
+
+/** "1 reply" or "5 replies", in the reader's language. */
+export function formatReplies(count: number): string {
+    return count === 1 ? m.repliesOne() : m.repliesMany({ count });
 }
