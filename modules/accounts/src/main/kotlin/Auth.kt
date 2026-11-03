@@ -1,6 +1,7 @@
 package dev.nilsschlegel.forum.accounts
 
 import dev.nilsschlegel.forum.core.Problem
+import dev.nilsschlegel.forum.core.RateLimits
 import dev.nilsschlegel.forum.core.env
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
@@ -12,6 +13,7 @@ import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.auth.session
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -108,30 +110,32 @@ internal fun Application.configureAuth(users: UserStore) {
 internal fun Route.authRoutes(users: UserStore) {
     val unknownUserHash = newPasswordHash(randomToken())
     route("/api/auth") {
-        post("/register") {
-            val credentials = call.receive<Credentials>()
-            val user = users.create(credentials.username.trim(), hashPassword(credentials.password))
-            if (user == null) {
-                call.respond(HttpStatusCode.Conflict, Problem("That username is taken."))
-                return@post
+        rateLimit(RateLimits.AUTH) {
+            post("/register") {
+                val credentials = call.receive<Credentials>()
+                val user = users.create(credentials.username.trim(), hashPassword(credentials.password))
+                if (user == null) {
+                    call.respond(HttpStatusCode.Conflict, Problem("That username is taken."))
+                    return@post
+                }
+                call.sessions.set(UserSession(user.id))
+                call.respond(HttpStatusCode.Created, user.toCurrentUser())
             }
-            call.sessions.set(UserSession(user.id))
-            call.respond(HttpStatusCode.Created, user.toCurrentUser())
-        }
-        post("/login") {
-            val credentials = call.receive<Credentials>()
-            val user = users.findByUsername(credentials.username.trim())
-            val matches = verifyPassword(credentials.password, user?.passwordHash ?: unknownUserHash)
-            if (user == null || !matches) {
-                call.respond(HttpStatusCode.Unauthorized, Problem("Wrong username or password."))
-                return@post
+            post("/login") {
+                val credentials = call.receive<Credentials>()
+                val user = users.findByUsername(credentials.username.trim())
+                val matches = verifyPassword(credentials.password, user?.passwordHash ?: unknownUserHash)
+                if (user == null || !matches) {
+                    call.respond(HttpStatusCode.Unauthorized, Problem("Wrong username or password."))
+                    return@post
+                }
+                if (user.status != UserStatus.ACTIVE) {
+                    call.respond(HttpStatusCode.Forbidden, Problem("This account is suspended."))
+                    return@post
+                }
+                call.sessions.set(UserSession(user.id))
+                call.respond(user.toCurrentUser())
             }
-            if (user.status != UserStatus.ACTIVE) {
-                call.respond(HttpStatusCode.Forbidden, Problem("This account is suspended."))
-                return@post
-            }
-            call.sessions.set(UserSession(user.id))
-            call.respond(user.toCurrentUser())
         }
         post("/logout") {
             call.sessions.clear<UserSession>()

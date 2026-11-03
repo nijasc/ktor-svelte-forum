@@ -3,6 +3,8 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.Role
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
+import dev.nilsschlegel.forum.core.RateLimits
+import dev.nilsschlegel.forum.core.configureRateLimits
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -103,11 +105,18 @@ private class TestAuth(
     }
 }
 
-private fun ApplicationTestBuilder.forumApp(repository: FakeForumRepository = FakeForumRepository()) {
-    application { forumModule(repository) }
+private fun ApplicationTestBuilder.forumApp(
+    repository: FakeForumRepository = FakeForumRepository(),
+    writesPerMinute: Int = RateLimits.WRITE_PER_MINUTE,
+) {
+    application { forumModule(repository, writesPerMinute) }
 }
 
-private fun Application.forumModule(repository: ForumRepository) {
+private fun Application.forumModule(
+    repository: ForumRepository,
+    writesPerMinute: Int,
+) {
+    configureRateLimits(writePerMinute = writesPerMinute)
     install(ContentNegotiation) { json() }
     install(StatusPages) {
         exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest) }
@@ -196,5 +205,26 @@ class ForumRoutesTest {
             client.get("/api/categories/general/threads?limit=0")
             assertEquals(1, repository.lastPage?.limit)
             assertEquals(HttpStatusCode.BadRequest, client.get("/api/categories/general/threads?limit=lots").status)
+        }
+
+    @Test
+    fun `writing is rate limited per user`() =
+        testApplication {
+            forumApp(writesPerMinute = 2)
+
+            suspend fun reply() =
+                client.post("/api/threads/1/posts") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"body":"Hi"}""")
+                }
+            client.post("/api/categories/general/threads") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"title":"Hi","body":"Hi"}""")
+            }
+            assertEquals(HttpStatusCode.Created, reply().status)
+            val limited = reply()
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
+            assertTrue(limited.headers["Retry-After"] != null)
+            assertEquals(HttpStatusCode.OK, client.get("/api/categories").status)
         }
 }

@@ -94,7 +94,7 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 
 ## Sign in
 
-`modules/accounts/.../Auth.kt` has the register, login, logout and current user routes, with passwords hashed by PBKDF2. To require a signed-in user in any module, wrap routes in `authenticate(SESSION_AUTH)` and read `call.principal<UserSession>()`. Registration is open and login has no rate limit, so restrict both before going live. The pages in `app/frontend/src/routes/login` and `app/frontend/src/routes/account` use `app/frontend/src/lib/auth.ts`.
+`modules/accounts/.../Auth.kt` has the register, login, logout and current user routes, with passwords hashed by PBKDF2. To require a signed-in user in any module, wrap routes in `authenticate(SESSION_AUTH)` and read `call.principal<UserSession>()`. Registration is open. Register and login are limited to 10 requests a minute per client address, and starting threads and replying to 20 a minute per user, set in `modules/core/.../RateLimits.kt`. A client over the limit gets 429. Behind a reverse proxy every client shares one address until forwarded headers are set up. The pages in `app/frontend/src/routes/login` and `app/frontend/src/routes/account` use `app/frontend/src/lib/auth.ts`.
 
 ## Forum
 

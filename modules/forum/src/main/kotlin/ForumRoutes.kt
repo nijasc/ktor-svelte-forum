@@ -3,6 +3,7 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
 import dev.nilsschlegel.forum.accounts.UserDirectory
+import dev.nilsschlegel.forum.core.RateLimits
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -10,6 +11,7 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -37,16 +39,18 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
             call.respond(forum.thread(call.threadId(), call.pageRequest()) ?: throw NotFoundException())
         }
         authenticate(SESSION_AUTH) {
-            post("/categories/{slug}/threads") {
-                val new = call.receive<NewThread>()
-                val thread =
-                    forum.createThread(call.slug(), call.userId(), new.title.trim(), new.body.trim()) ?: throw NotFoundException()
-                call.respond(HttpStatusCode.Created, thread)
-            }
-            post("/threads/{id}/posts") {
-                val new = call.receive<NewPost>()
-                val post = forum.reply(call.threadId(), call.userId(), new.body.trim()) ?: throw NotFoundException()
-                call.respond(HttpStatusCode.Created, post)
+            rateLimit(RateLimits.WRITE) {
+                post("/categories/{slug}/threads") {
+                    val new = call.receive<NewThread>()
+                    val thread =
+                        forum.createThread(call.slug(), call.userId(), new.title.trim(), new.body.trim()) ?: throw NotFoundException()
+                    call.respond(HttpStatusCode.Created, thread)
+                }
+                post("/threads/{id}/posts") {
+                    val new = call.receive<NewPost>()
+                    val post = forum.reply(call.threadId(), call.userId(), new.body.trim()) ?: throw NotFoundException()
+                    call.respond(HttpStatusCode.Created, post)
+                }
             }
         }
     }

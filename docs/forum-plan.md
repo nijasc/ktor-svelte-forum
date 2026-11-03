@@ -64,7 +64,7 @@ Do this before building pages, while there is no data to migrate.
 - [x] Session holds the user id, and the user is loaded per request (`accounts`)
 - [x] Keyset pagination on threads and posts: `?cursor=&limit=`, returning `{ items, next }` (`forum`)
 - [x] `reply_count` and `last_post_at` on threads, newest activity first (`forum`)
-- [ ] Rate limiting on register, login and posting (`core`)
+- [x] Rate limiting on register, login and posting (`core`). Per client address for sign-in, per user for writing. Behind a reverse proxy it needs forwarded headers first, see Phase 4
 - [ ] Repository tests against real Postgres with Testcontainers (`database`)
 
 ### Phase 1: a forum you can use

@@ -2,6 +2,7 @@ package dev.nilsschlegel.forum
 
 import dev.nilsschlegel.forum.accounts.accounts
 import dev.nilsschlegel.forum.core.configureErrors
+import dev.nilsschlegel.forum.core.configureRateLimits
 import dev.nilsschlegel.forum.core.env
 import dev.nilsschlegel.forum.database.configureDatabase
 import dev.nilsschlegel.forum.forum.forum
@@ -25,7 +26,7 @@ fun main() {
     embeddedServer(Netty, port = port, module = Application::module).start(wait = true)
 }
 
-/** The only place that knows every module. Order matters: errors and the database come before the features that use them. */
+/** The only place that knows every module. Order matters: errors, rate limits and the database come before the features that use them. */
 fun Application.module() {
     install(Svelte) {
         generateTs = true
@@ -35,6 +36,7 @@ fun Application.module() {
         }
     }
     configureErrors()
+    configureRateLimits()
     configureDatabase()
     val users = accounts()
     forum(users)

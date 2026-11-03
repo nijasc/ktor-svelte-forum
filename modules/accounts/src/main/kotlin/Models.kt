@@ -1,5 +1,6 @@
 package dev.nilsschlegel.forum.accounts
 
+import dev.nilsschlegel.forum.core.Actor
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -36,10 +37,10 @@ internal enum class UserStatus {
 
 /** The signed-in user, available as `call.principal<AuthUser>()` inside `authenticate(SESSION_AUTH)`. */
 data class AuthUser(
-    val id: Long,
+    override val id: Long,
     val username: String,
     val role: Role,
-)
+) : Actor
 
 /** Looks up display names, so other modules can show who wrote something without reading the users table. */
 interface UserDirectory {
