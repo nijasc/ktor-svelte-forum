@@ -132,7 +132,7 @@ Members can report a post. Moderators and admins work under `/api/staff`, and ev
 | `GET`, `POST`, `PATCH /api/staff/categories`, `PUT /api/staff/categories/order` | Admin | Create, rename, archive and reorder categories |
 | `GET /api/staff/audit` | Moderator | The audit log, newest first |
 
-Moderators hide content but never edit what someone wrote. A hidden post shows as a placeholder and leaves the reply count, and hiding a thread removes it from lists and reading until it is restored. A banned user is signed out on their next request. A locked thread answers 423 to replies, and an archived category stays readable but takes no new threads.
+The staff area is at `/staff` for moderators and admins, with the report queue, the audit log, category management for admins and a user lookup. Moderators hide content but never edit what someone wrote. A hidden post shows as a placeholder and leaves the reply count, and hiding a thread removes it from lists and reading until it is restored. A banned user is signed out on their next request. A locked thread answers 423 to replies, and an archived category stays readable but takes no new threads.
 
 Roles are `member`, `moderator` and `admin`. To make the first admin, set `INITIAL_ADMIN` to a username before that person signs up. After that, admins change roles from the API.
 

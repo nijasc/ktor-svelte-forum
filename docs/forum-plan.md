@@ -78,12 +78,12 @@ Do this before building pages, while there is no data to migrate.
 
 ### Phase 2: community and moderation
 
-- [ ] Public profile page: username, join date, recent threads and posts
-- [ ] Roles enforced in routes. Moderators can pin, lock, move, hide and delete
-- [ ] Reports: flag a post, moderator queue, resolve with a note
-- [ ] Ban and suspend a user. Banned users cannot write, and their session stops working
-- [ ] Audit log of moderator actions (`moderation` module)
-- [ ] Admin: create, reorder and archive categories
+- [x] Public profile page: username, join date, recent threads and posts
+- [x] Roles enforced in routes. Moderators can pin, lock, move, hide and restore. They hide rather than delete, and never edit other people's posts
+- [x] Reports: flag a post, moderator queue, resolve with a note
+- [x] Ban a user, permanently until lifted. Banned users cannot write, and their session stops working on the next request. Timed suspensions are not built
+- [x] Audit log of moderator actions (`moderation` module)
+- [x] Admin: create, rename, reorder and archive categories
 
 ### Phase 3: keeping people coming back
 
@@ -152,6 +152,9 @@ Migrations follow the README rule: shared version numbers, one file per change. 
 | Ids in URLs | Numeric, or numeric plus a slug (`/t/42-title`) | Numeric plus slug for readable links |
 | Email sending | SMTP, or a provider such as Resend | Provider behind the `mail` interface |
 | Who can register | Open, invite only, or approval | Open with rate limits, with a setting to close it |
+| Can moderators edit posts | Edit, or only hide | Decided: hide only. Moderators never put words in someone else's mouth |
+| Bans | Permanent, or timed | Decided: permanent until lifted, with the reason in the audit log. Timed suspensions can come later |
+| First admin | Seed script, or a setting | Decided: `INITIAL_ADMIN` makes that username an admin on sign-up while no admin exists |
 | Account deletion | Hard delete, or anonymise | Anonymise |
 | Realtime updates | Polling, or server-sent events | Polling first. Revisit after Phase 3 |
 
