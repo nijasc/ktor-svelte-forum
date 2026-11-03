@@ -75,10 +75,16 @@ data class Credentials(
     }
 }
 
-/** Installs sessions and the [SESSION_AUTH] authentication, and serves the `/api/auth` routes. */
-fun Application.accounts(): Accounts {
-    val store = DatabaseUserStore(env("INITIAL_ADMIN"))
-    configureAuth(store)
+/**
+ * Installs sessions and the [SESSION_AUTH] authentication, and serves the `/api/auth` and `/api/users` routes.
+ * The settings default to `COOKIE_SECURE` and `INITIAL_ADMIN`, and tests pass their own.
+ */
+fun Application.accounts(
+    secureCookie: Boolean = env("COOKIE_SECURE")?.toBoolean() ?: true,
+    initialAdmin: String? = env("INITIAL_ADMIN"),
+): Accounts {
+    val store = DatabaseUserStore(initialAdmin)
+    configureAuth(store, secureCookie)
     routing {
         authRoutes(store)
         profileRoutes(store)
@@ -86,14 +92,17 @@ fun Application.accounts(): Accounts {
     return store
 }
 
-internal fun Application.configureAuth(users: UserStore) {
+internal fun Application.configureAuth(
+    users: UserStore,
+    secureCookie: Boolean,
+) {
     val secret = env("SESSION_SECRET") ?: temporarySecret()
     require(secret.length >= MIN_SECRET_LENGTH) { "SESSION_SECRET needs at least $MIN_SECRET_LENGTH characters." }
     install(Sessions) {
         cookie<UserSession>("session") {
             cookie.path = "/"
             cookie.httpOnly = true
-            cookie.secure = env("COOKIE_SECURE")?.toBoolean() ?: true
+            cookie.secure = secureCookie
             cookie.maxAgeInSeconds = SESSION_SECONDS
             cookie.extensions["SameSite"] = "Lax"
             transform(SessionTransportTransformerMessageAuthentication(secret.toByteArray()))

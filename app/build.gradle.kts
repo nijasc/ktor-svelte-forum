@@ -50,6 +50,7 @@ dependencies {
     implementation(projects.database)
     implementation(projects.accounts)
     implementation(projects.forum)
+    implementation(projects.moderation)
     implementation(libs.ktor.server.netty)
     implementation(libs.logback)
 }

@@ -1,5 +1,7 @@
 package dev.nilsschlegel.forum.forum
 
+import kotlinx.serialization.Serializable
+
 /**
  * What moderators and admins can do to the forum's content. The caller checks the role and writes the audit log,
  * this only changes data. Every method answers whether the thread, post or category existed.
@@ -82,6 +84,7 @@ data class StaffPost(
     val deleted: Boolean,
 )
 
+@Serializable
 data class StaffCategory(
     val slug: String,
     val title: String,

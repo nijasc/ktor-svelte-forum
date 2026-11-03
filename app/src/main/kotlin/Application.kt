@@ -6,6 +6,7 @@ import dev.nilsschlegel.forum.core.configureRateLimits
 import dev.nilsschlegel.forum.core.env
 import dev.nilsschlegel.forum.database.configureDatabase
 import dev.nilsschlegel.forum.forum.forum
+import dev.nilsschlegel.forum.moderation.moderation
 import io.github.nijasc.ktor.svelte.Svelte
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -38,8 +39,9 @@ fun Application.module() {
     configureErrors()
     configureRateLimits()
     configureDatabase()
-    val users = accounts()
-    forum(users)
+    val accounts = accounts()
+    val forum = forum(accounts)
+    moderation(accounts, forum)
 
     routing {
         get("/api/hello") {

@@ -1,3 +1,7 @@
+export interface ActionReason {
+    reason: string;
+}
+
 export interface Activity {
     threadCount: number;
     postCount: number;
@@ -13,10 +17,29 @@ export interface ActivityPost {
     createdAt: string;
 }
 
+export interface AuditEntry {
+    id: number;
+    actor: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    detail: string;
+    createdAt: string;
+}
+
+export interface AuditPage {
+    items: AuditEntry[];
+    next?: string | null;
+}
+
 export interface Category {
     slug: string;
     title: string;
     description: string;
+}
+
+export interface CategoryOrder {
+    slugs: string[];
 }
 
 export interface Credentials {
@@ -34,8 +57,22 @@ export interface Greeting {
     message: string;
 }
 
+export interface MoveThread {
+    category: string;
+}
+
+export interface NewCategory {
+    slug: string;
+    title: string;
+    description?: string;
+}
+
 export interface NewPost {
     body: string;
+}
+
+export interface NewReport {
+    reason: string;
 }
 
 export interface NewThread {
@@ -68,6 +105,51 @@ export interface Profile {
     joinedAt: string;
 }
 
+export interface ReportPage {
+    items: ReportView[];
+    next?: string | null;
+}
+
+export interface ReportView {
+    id: number;
+    post: ReportedPost;
+    reporter: string;
+    reason: string;
+    createdAt: string;
+}
+
+export interface ReportedPost {
+    id: number;
+    threadId: number;
+    threadTitle: string;
+    author: string;
+    body: string;
+    hidden: boolean;
+}
+
+export interface ResolveReport {
+    outcome: 'dismissed' | 'actioned';
+    note?: string;
+}
+
+export interface RoleChange {
+    role: 'member' | 'moderator' | 'admin';
+}
+
+export interface StaffCategory {
+    slug: string;
+    title: string;
+    description: string;
+    position: number;
+    archived: boolean;
+}
+
+export interface StaffUserView {
+    username: string;
+    role: 'member' | 'moderator' | 'admin';
+    status: 'active' | 'banned';
+}
+
 export interface ThreadDetail {
     id: number;
     category: string;
@@ -95,4 +177,10 @@ export interface ThreadSummary {
     lastPostAt: string;
     pinned?: boolean;
     locked?: boolean;
+}
+
+export interface UpdateCategory {
+    title?: string | null;
+    description?: string | null;
+    archived?: boolean | null;
 }

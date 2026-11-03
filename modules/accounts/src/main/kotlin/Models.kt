@@ -24,8 +24,12 @@ enum class Role {
     }
 }
 
+@Serializable
 enum class UserStatus {
+    @SerialName("active")
     ACTIVE,
+
+    @SerialName("banned")
     BANNED,
     ;
 

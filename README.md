@@ -70,10 +70,11 @@ modules/
   database/     Connection pool, Flyway and the dbQuery helper
   accounts/     Register, login, sessions and users
   forum/        Categories, threads and posts
+  moderation/   Reports, bans, the audit log and the staff routes
 build-logic/    Convention plugins
 ```
 
-Dependencies point one way: `app` depends on every module, `forum` depends on `accounts`, and `accounts` and `forum` depend on `database`, which depends on `core`. Features do not reach into each other's tables. `app` is the only place that knows every module, in `Application.module()`.
+Dependencies point one way: `app` depends on every module, `moderation` depends on `forum` and `accounts`, `forum` depends on `accounts`, and `accounts`, `forum` and `moderation` depend on `database`, which depends on `core`. Features do not reach into each other's tables. `app` is the only place that knows every module, in `Application.module()`.
 
 Each feature exposes one function that installs it (`accounts()`, `forum()`) and keeps everything else `internal`. Routes talk to an interface such as `ForumRepository`, and the Exposed class behind it is the only code that touches tables. That is why `ForumRoutesTest` runs without a database.
 
@@ -111,7 +112,31 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 | `PATCH /api/posts/{id}` | Edit your own post. Needs a session |
 | `DELETE /api/posts/{id}` | Delete your own post, except the first post of a thread. Needs a session |
 
-Two categories, `general` and `help`, are created by the first migration. Reading is public and writing needs a session. The frontend has pages for the categories, the threads in a category, starting a thread, and reading, replying to, editing and deleting posts. Posts are written in Markdown and cut down to a short list of safe tags in the browser. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
+Two categories, `general` and `help`, are created by the first migration. A user's recent activity is at `GET /api/users/{username}/activity`, and their profile at `GET /api/users/{username}`. Reading is public and writing needs a session. The frontend has pages for the categories, the threads in a category, starting a thread, and reading, replying to, editing and deleting posts. Posts are written in Markdown and cut down to a short list of safe tags in the browser. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
+
+## Moderation
+
+Members can report a post. Moderators and admins work under `/api/staff`, and every change they make is written to the audit log with who did it and why.
+
+| Route | Who | Purpose |
+|---|---|---|
+| `POST /api/posts/{id}/reports` | Member | Report a post. One report per user and post |
+| `GET /api/staff/reports` | Moderator | Open reports, oldest first |
+| `POST /api/staff/reports/{id}/resolve` | Moderator | Close a report as `dismissed` or `actioned`, with a note |
+| `POST /api/staff/threads/{id}/pin`, `unpin`, `lock`, `unlock`, `restore` | Moderator | Change a thread |
+| `POST /api/staff/threads/{id}/hide`, `/api/staff/posts/{id}/hide` | Moderator | Hide a thread or post. Needs a reason |
+| `POST /api/staff/posts/{id}/restore` | Moderator | Show a hidden post again |
+| `POST /api/staff/threads/{id}/move` | Moderator | Move a thread to another category |
+| `POST /api/staff/users/{username}/ban`, `unban` | Moderator | Ban or unban a member. Admins also handle moderators. Nobody handles admins |
+| `PUT /api/staff/users/{username}/role` | Admin | Change a role, but not your own |
+| `GET`, `POST`, `PATCH /api/staff/categories`, `PUT /api/staff/categories/order` | Admin | Create, rename, archive and reorder categories |
+| `GET /api/staff/audit` | Moderator | The audit log, newest first |
+
+Moderators hide content but never edit what someone wrote. A hidden post shows as a placeholder and leaves the reply count, and hiding a thread removes it from lists and reading until it is restored. A banned user is signed out on their next request. A locked thread answers 423 to replies, and an archived category stays readable but takes no new threads.
+
+Roles are `member`, `moderator` and `admin`. To make the first admin, set `INITIAL_ADMIN` to a username before that person signs up. After that, admins change roles from the API.
+
+The audit entry is written after the change succeeds, in its own transaction, so a failure to write it does not undo the action.
 
 ## Database
 
