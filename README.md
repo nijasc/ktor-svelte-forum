@@ -40,11 +40,11 @@ Inside a container, `localhost` is the container itself, so point `DATABASE_URL`
 
 ## Release
 
-```bash
-scripts/release.sh 0.2.0
-```
+Write commits as [conventional commits](https://www.conventionalcommits.org), like `feat(forum): add reactions` or `fix(accounts): trim usernames`. [release-please](https://github.com/googleapis/release-please) reads them on every push to `main` and keeps one open pull request that bumps `version` in `gradle.properties` and updates `CHANGELOG.md`.
 
-This sets `version` in `gradle.properties`, commits, tags `v0.2.0` and pushes. The `Release` workflow then checks that the tag matches the version, runs every check, pushes `ghcr.io/<owner>/<repo>:0.2.0` and `:latest`, and creates a GitHub release with the JAR and generated notes. A version with a suffix, like `0.2.0-rc.1`, is marked as a pre-release. Run the script from a clean `main`.
+To release, merge that pull request. The `Release` workflow then tags `v<version>`, runs every check, pushes `ghcr.io/<owner>/<repo>:<version>` and `:latest`, and attaches the JAR to the GitHub release. Until 1.0, `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE` also bumps the minor.
+
+One setting is needed once: in the repository, under Settings, Actions, General, turn on "Allow GitHub Actions to create and approve pull requests". Do not edit the version by hand.
 
 ## Configuration
 
