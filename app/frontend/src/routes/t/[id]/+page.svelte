@@ -7,6 +7,7 @@
     import { MAX_BODY_LENGTH } from '#lib/limits.ts';
     import Markdown from '#lib/Markdown.svelte';
     import PostEditor from '#lib/PostEditor.svelte';
+    import { isStaff } from '#lib/roles.ts';
     import { session } from '#lib/session.svelte.ts';
     import State from '#lib/State.svelte';
 
@@ -114,6 +115,45 @@
         }
     }
 
+    let actionError = $state('');
+    let notice = $state('');
+
+    /** Runs a moderation or reporting action, then shows the result. [reload] fetches the thread again afterwards. */
+    async function act(action: () => Promise<unknown>, reload = true) {
+        actionError = '';
+        notice = '';
+        try {
+            await action();
+            if (reload) await load(id);
+        } catch (failure) {
+            actionError = errorMessage(failure);
+        }
+    }
+
+    /** Asks for a reason, and does nothing if none is given. */
+    function withReason(action: (reason: string) => Promise<unknown>) {
+        const reason = prompt(m.reasonPrompt())?.trim();
+        if (reason) act(() => action(reason));
+    }
+
+    function report(post: Post) {
+        const reason = prompt(m.reportPrompt())?.trim();
+        if (!reason) return;
+        act(async () => {
+            await api.posts.reports(post.id, { reason });
+            notice = m.reportSent();
+        }, false);
+    }
+
+    function move() {
+        const category = prompt(m.movePrompt())?.trim();
+        if (category && thread) act(() => api.staff.threadsMove(thread!.id, { category }));
+    }
+
+    function isAuthorLink(post: Post): boolean {
+        return post.author !== 'deleted';
+    }
+
     /** Usernames are unique ignoring case, so this tells whether a post is the reader's own. */
     function isMine(post: Post): boolean {
         return session.user?.username.toLowerCase() === post.author.toLowerCase();
@@ -133,17 +173,59 @@
                 {m.backToCategory({ category: category?.title ?? thread.category })}
             </a>
         </nav>
-        <h1 class="text-2xl font-bold break-words">{thread.title}</h1>
+        <h1 class="flex flex-wrap items-center gap-2 text-2xl font-bold break-words">
+            {thread.title}
+            {#if thread.pinned}<span class="badge badge-primary">{m.threadPinned()}</span>{/if}
+            {#if thread.locked}<span class="badge">{m.threadLockedBadge()}</span>{/if}
+        </h1>
         <p class="mb-4 text-sm opacity-70">
             {m.byAuthor({ author: thread.author })} · {formatReplies(thread.replyCount)}
         </p>
+
+        {#if isStaff(session.user)}
+            <div class="mb-4 flex flex-wrap gap-2">
+                {#if thread.pinned}
+                    <button class="btn btn-sm" onclick={() => act(() => api.staff.threadsUnpin(thread!.id))}>
+                        {m.unpin()}
+                    </button>
+                {:else}
+                    <button class="btn btn-sm" onclick={() => act(() => api.staff.threadsPin(thread!.id))}>
+                        {m.pin()}
+                    </button>
+                {/if}
+                {#if thread.locked}
+                    <button class="btn btn-sm" onclick={() => act(() => api.staff.threadsUnlock(thread!.id))}>
+                        {m.unlock()}
+                    </button>
+                {:else}
+                    <button class="btn btn-sm" onclick={() => act(() => api.staff.threadsLock(thread!.id))}>
+                        {m.lock()}
+                    </button>
+                {/if}
+                <button class="btn btn-sm" onclick={move}>{m.move()}</button>
+                <button
+                    class="btn btn-error btn-sm"
+                    onclick={() => withReason((reason) => api.staff.threadsHide(thread!.id, { reason }))}
+                >
+                    {m.threadHide()}
+                </button>
+            </div>
+        {/if}
+        {#if actionError}<p class="text-error mb-2" role="alert">{actionError}</p>{/if}
+        {#if notice}<p class="mb-2" role="status">{notice}</p>{/if}
 
         <ol class="flex flex-col gap-3">
             {#each posts as post (post.id)}
                 <li id={`post-${post.id}`} class="card bg-base-100 shadow-sm">
                     <div class="card-body gap-2 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
-                            <span class="font-semibold">{post.author}</span>
+                            {#if isAuthorLink(post)}
+                                <a class="font-semibold" href={link(`/u/${encodeURIComponent(post.author)}`)}>
+                                    {post.author}
+                                </a>
+                            {:else}
+                                <span class="font-semibold">{post.author}</span>
+                            {/if}
                             <span class="opacity-70">
                                 <time datetime={post.createdAt} title={formatDateTime(post.createdAt)}>
                                     {formatAgo(post.createdAt)}
@@ -156,6 +238,18 @@
                         </div>
                         {#if post.deleted}
                             <p class="italic opacity-60">{m.postDeleted()}</p>
+                        {:else if post.hidden}
+                            <p class="italic opacity-60">{m.hiddenPost()}</p>
+                            {#if isStaff(session.user)}
+                                <div>
+                                    <button
+                                        class="btn btn-ghost btn-xs"
+                                        onclick={() => act(() => api.staff.postsRestore(post.id))}
+                                    >
+                                        {m.restore()}
+                                    </button>
+                                </div>
+                            {/if}
                         {:else if editing === post.id}
                             <form class="flex flex-col gap-2" onsubmit={saveEdit}>
                                 <PostEditor
@@ -187,6 +281,21 @@
                                         >
                                     {/if}
                                 </div>
+                            {:else if session.user}
+                                <div class="flex gap-2">
+                                    <button class="btn btn-ghost btn-xs" onclick={() => report(post)}
+                                        >{m.report()}</button
+                                    >
+                                    {#if isStaff(session.user) && post.id !== firstPostId}
+                                        <button
+                                            class="btn btn-ghost btn-xs"
+                                            onclick={() =>
+                                                withReason((reason) => api.staff.postsHide(post.id, { reason }))}
+                                        >
+                                            {m.hide()}
+                                        </button>
+                                    {/if}
+                                </div>
                             {/if}
                         {/if}
                     </div>
@@ -201,7 +310,9 @@
         {/if}
 
         <section class="mt-8">
-            {#if session.user}
+            {#if thread.locked}
+                <p class="alert">{m.threadLocked()}</p>
+            {:else if session.user}
                 <form class="flex flex-col gap-3" onsubmit={submitReply}>
                     <PostEditor id="reply" label={m.replyTitle()} bind:value={reply} maxLength={MAX_BODY_LENGTH} />
                     {#if replyError}<p class="text-error" role="alert">{replyError}</p>{/if}

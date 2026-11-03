@@ -3,14 +3,15 @@
     import { api, type Category, type ThreadSummary } from '#api';
     import { localizeHref as link, m } from '#i18n';
     import { errorMessage } from '#lib/errors.ts';
-    import { formatAgo, formatReplies } from '#lib/format.ts';
     import { session } from '#lib/session.svelte.ts';
     import State from '#lib/State.svelte';
+    import ThreadRow from '#lib/ThreadRow.svelte';
 
     const slug = $derived(page.params.slug ?? '');
 
     let category = $state<Category | null>(null);
     let threads = $state<ThreadSummary[]>([]);
+    let pinned = $state<ThreadSummary[]>([]);
     let next = $state<string | null>(null);
     let loading = $state(true);
     let loadingMore = $state(false);
@@ -20,11 +21,13 @@
         loading = true;
         error = null;
         threads = [];
+        pinned = [];
         next = null;
         try {
             const [categories, first] = await Promise.all([api.categories.list(), api.categories.getThreads(forSlug)]);
             category = categories.find((candidate) => candidate.slug === forSlug) ?? null;
             threads = first.items;
+            pinned = first.pinned ?? [];
             next = first.next ?? null;
         } catch (failure) {
             error = errorMessage(failure);
@@ -70,20 +73,16 @@
     {/if}
 </div>
 
-<State {loading} {error} empty={threads.length === 0} emptyText={m.threadsEmpty()} onretry={() => load(slug)}>
+<State
+    {loading}
+    {error}
+    empty={threads.length === 0 && pinned.length === 0}
+    emptyText={m.threadsEmpty()}
+    onretry={() => load(slug)}
+>
     <ul class="flex flex-col gap-3">
-        {#each threads as thread (thread.id)}
-            <li>
-                <a class="card bg-base-100 shadow-sm transition hover:shadow-md" href={link(`/t/${thread.id}`)}>
-                    <div class="card-body gap-1 p-4">
-                        <h2 class="card-title text-lg">{thread.title}</h2>
-                        <p class="text-sm opacity-70">
-                            {m.byAuthor({ author: thread.author })} · {formatReplies(thread.replyCount)} ·
-                            {m.lastActivity({ time: formatAgo(thread.lastPostAt) })}
-                        </p>
-                    </div>
-                </a>
-            </li>
+        {#each [...pinned, ...threads] as thread (thread.id)}
+            <li><ThreadRow {thread} /></li>
         {/each}
     </ul>
     {#if next}

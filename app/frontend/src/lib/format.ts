@@ -26,3 +26,8 @@ export function formatAgo(iso: string): string {
 export function formatReplies(count: number): string {
     return count === 1 ? m.repliesOne() : m.repliesMany({ count });
 }
+
+/** A date without a time, in the reader's language. */
+export function formatDate(iso: string): string {
+    return new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium' }).format(new Date(iso));
+}
