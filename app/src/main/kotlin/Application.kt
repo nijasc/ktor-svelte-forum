@@ -10,6 +10,7 @@ import dev.nilsschlegel.forum.forum.forum
 import dev.nilsschlegel.forum.mail.mailSenderFromEnv
 import dev.nilsschlegel.forum.moderation.moderation
 import dev.nilsschlegel.forum.notifications.notifications
+import dev.nilsschlegel.forum.search.search
 import io.github.nijasc.ktor.svelte.Svelte
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -47,6 +48,7 @@ fun Application.module() {
     val forum = forum(accounts, events)
     moderation(accounts, forum)
     notifications(accounts, events)
+    search(accounts)
 
     routing {
         get("/api/hello") {

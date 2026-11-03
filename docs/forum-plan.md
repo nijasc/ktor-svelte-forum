@@ -91,7 +91,7 @@ Do this before building pages, while there is no data to migrate.
 - [x] Notifications for replies and mentions, with an unread count (`notifications` module). In-process events, replies fold into one unread notification
 - [x] Watch a thread. Starting or replying to a thread watches it, and it can be turned off
 - [x] Reactions on posts. A fixed set of four, one per person and post, counted for everyone and shown to the person who chose
-- [ ] Search across threads and posts with Postgres full-text search (`search` module)
+- [x] Search across threads and posts with Postgres full-text search (`search` module). Title hits rank above post hits, and the module reads the forum's tables on purpose
 
 ### Phase 4: running it for real
 

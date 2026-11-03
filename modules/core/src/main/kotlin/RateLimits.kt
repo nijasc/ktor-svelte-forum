@@ -22,8 +22,12 @@ object RateLimits {
     /** Starting threads and posting, counted per signed-in user. Put it inside `authenticate`. */
     val WRITE = RateLimitName("write")
 
+    /** Searching, counted per client address. Each search is a database query, so it is limited too. */
+    val SEARCH = RateLimitName("search")
+
     const val AUTH_PER_MINUTE = 10
     const val WRITE_PER_MINUTE = 20
+    const val SEARCH_PER_MINUTE = 30
 }
 
 /**
@@ -33,10 +37,15 @@ object RateLimits {
 fun Application.configureRateLimits(
     authPerMinute: Int = RateLimits.AUTH_PER_MINUTE,
     writePerMinute: Int = RateLimits.WRITE_PER_MINUTE,
+    searchPerMinute: Int = RateLimits.SEARCH_PER_MINUTE,
 ) {
     install(RateLimit) {
         register(RateLimits.AUTH) {
             rateLimiter(limit = authPerMinute, refillPeriod = 1.minutes)
+            requestKey { call -> call.clientAddress() }
+        }
+        register(RateLimits.SEARCH) {
+            rateLimiter(limit = searchPerMinute, refillPeriod = 1.minutes)
             requestKey { call -> call.clientAddress() }
         }
         register(RateLimits.WRITE) {

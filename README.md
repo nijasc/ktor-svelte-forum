@@ -76,10 +76,11 @@ modules/
   moderation/   Reports, bans, the audit log and the staff routes
   mail/         Sending email, to the log or through Resend
   notifications/ Watching threads, mentions and the notification list
+  search/       Full-text search over thread titles and posts
 build-logic/    Convention plugins
 ```
 
-Dependencies point one way: `app` depends on every module, `moderation` and `notifications` depend on `forum` and `accounts`, `forum` depends on `accounts`, and `accounts`, `forum` and `moderation` depend on `database`, which depends on `core`. Features do not reach into each other's tables. `app` is the only place that knows every module, in `Application.module()`.
+Dependencies point one way: `app` depends on every module, `moderation` and `notifications` depend on `forum` and `accounts`, `forum` depends on `accounts`, and `accounts`, `forum` and `moderation` depend on `database`, which depends on `core`. Features do not reach into each other's tables, with one exception: `search` reads the forum's tables with SQL, because it owns the search query and its indexes. `app` is the only place that knows every module, in `Application.module()`.
 
 Each feature exposes one function that installs it (`accounts()`, `forum()`) and keeps everything else `internal`. Routes talk to an interface such as `ForumRepository`, and the Exposed class behind it is the only code that touches tables. That is why `ForumRoutesTest` runs without a database.
 
@@ -145,6 +146,12 @@ The forum publishes `ThreadCreated` and `PostCreated` on the in-process event bu
 | `GET`, `PUT`, `DELETE /api/threads/{id}/watch` | See, start or stop watching a thread |
 
 Events are handled one after another inside the request that caused them, and a handler that fails is logged and never fails the request. Nothing is stored, so an event in flight when the server stops is lost. Move to a queue if that ever matters.
+
+## Search
+
+`GET /api/search?q=` searches thread titles and post text for everyone, with Postgres full-text search. It reads quotes for an exact phrase, `OR` for either word and a minus sign to leave a word out, and any other input is safe. A word in a title ranks above the same word in a post. Hidden and deleted content never matches, and a hidden thread disappears from results. Results are paged with `limit` and `cursor` and stop after 200 hits. It is limited to 30 searches a minute per client address.
+
+Snippets mark the matching words with two control characters, `MATCH_START` and `MATCH_END`, and not with HTML, so a page shows them by splitting on those characters and never has to treat user text as markup. Tags in posts are replaced by spaces before indexing, because Postgres otherwise skips the word next to a tag. The text search uses the `simple` configuration, with no stemming and no stop words, which suits a forum in more than one language.
 
 ## Moderation
 
