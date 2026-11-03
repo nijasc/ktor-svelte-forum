@@ -106,7 +106,7 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 | `POST /api/categories/{slug}/threads` | Start a thread. Needs a session |
 | `POST /api/threads/{id}/posts` | Reply to a thread. Needs a session |
 
-Two categories, `general` and `help`, are created by the first migration. Reading is public and writing needs a session. The frontend does not have forum pages yet.
+Two categories, `general` and `help`, are created by the first migration. Reading is public and writing needs a session. The frontend does not have forum pages yet. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
 
 ## Database
 
