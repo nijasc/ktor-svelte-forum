@@ -4,6 +4,7 @@
     import { onMount } from 'svelte';
     import { signOut } from '#lib/auth.ts';
     import { localizeHref as link, m } from '#i18n';
+    import { isStaff } from '#lib/roles.ts';
     import { refreshSession, session } from '#lib/session.svelte.ts';
 
     let { children } = $props();
@@ -22,6 +23,9 @@
         <a class="text-xl font-bold" href={link('/')}>{m.siteName()}</a>
         <nav class="flex items-center gap-2">
             {#if session.user}
+                {#if isStaff(session.user)}
+                    <a class="btn btn-ghost btn-sm" href={link('/staff')}>{m.navStaff()}</a>
+                {/if}
                 <a class="btn btn-ghost btn-sm" href={link('/account')}>{session.user.username}</a>
                 <button class="btn btn-sm" onclick={leave}>{m.navSignOut()}</button>
             {:else if session.ready}
