@@ -11,6 +11,7 @@ flyway = "13.12.0"
 ideaExt = "1.4.1"
 coroutines = "1.11.0"
 serialization = "1.9.0"
+testcontainers = "2.0.5"
 
 [libraries]
 # Build logic classpath
@@ -45,6 +46,9 @@ hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+
+# Testing
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 
 # Runtime
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

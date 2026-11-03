@@ -20,6 +20,8 @@ Then open http://localhost:8080. In IntelliJ, run the `Dev` configuration. On Wi
 
 Format with `./gradlew ktlintFormat` and `./gradlew svelteRun --script=format`.
 
+Repository and migration tests run against a real Postgres started by Testcontainers, so `check` needs Docker. Without it those tests are skipped. A module's tests get the database with `testImplementation(testFixtures(projects.database))` and call `TestDatabase.reset()` before each test.
+
 After you add or change a route, run `./gradlew svelteGenerateTs` to update the TypeScript client in `app/frontend/src/lib/api`.
 
 ## Build

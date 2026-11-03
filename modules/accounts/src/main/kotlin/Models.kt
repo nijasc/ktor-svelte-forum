@@ -43,7 +43,7 @@ data class AuthUser(
 ) : Actor
 
 /** Looks up display names, so other modules can show who wrote something without reading the users table. */
-interface UserDirectory {
+fun interface UserDirectory {
     /** Names for the ids that exist. Ids with no user are left out. */
     suspend fun usernames(ids: Collection<Long>): Map<Long, String>
 }
