@@ -28,6 +28,16 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "",
                         "content": {
@@ -318,11 +328,24 @@
                 "type": "object",
                 "title": "CurrentUser",
                 "required": [
-                    "username"
+                    "id",
+                    "username",
+                    "role"
                 ],
                 "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
                     "username": {
                         "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "moderator",
+                            "admin"
+                        ]
                     }
                 }
             },

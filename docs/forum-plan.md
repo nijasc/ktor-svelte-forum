@@ -59,9 +59,9 @@ Each phase ends in something usable. Each item is one or a few commits, using th
 
 Do this before building pages, while there is no data to migrate.
 
-- [ ] Users get a numeric id, email, role, status and `created_at` (`accounts`)
-- [ ] Posts and threads reference `user_id`. Responses still return the username (`forum`)
-- [ ] Session holds the user id, and the user is loaded per request (`accounts`)
+- [x] Users get a numeric id, email, role, status and `created_at` (`accounts`). Email is stored but not collected until Phase 3
+- [x] Posts and threads reference `user_id`. Responses still return the username (`forum`)
+- [x] Session holds the user id, and the user is loaded per request (`accounts`)
 - [ ] Keyset pagination on threads and posts: `?before=<id>&limit=` (`forum`)
 - [ ] `reply_count` and `last_post_at` on threads, newest activity first (`forum`)
 - [ ] Rate limiting on register, login and posting (`core`)

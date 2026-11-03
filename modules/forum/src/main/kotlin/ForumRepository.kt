@@ -12,7 +12,7 @@ internal interface ForumRepository {
     /** Creates the thread with [body] as its first post, or returns null if there is no such category. */
     suspend fun createThread(
         categorySlug: String,
-        author: String,
+        authorId: Long,
         title: String,
         body: String,
     ): ThreadDetail?
@@ -20,7 +20,7 @@ internal interface ForumRepository {
     /** Adds a post to the thread, or returns null if there is no such thread. */
     suspend fun reply(
         threadId: Long,
-        author: String,
+        authorId: Long,
         body: String,
     ): Post?
 }

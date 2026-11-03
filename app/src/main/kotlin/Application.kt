@@ -36,8 +36,8 @@ fun Application.module() {
     }
     configureErrors()
     configureDatabase()
-    accounts()
-    forum()
+    val users = accounts()
+    forum(users)
 
     routing {
         get("/api/hello") {

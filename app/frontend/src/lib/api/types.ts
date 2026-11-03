@@ -10,7 +10,9 @@ export interface Credentials {
 }
 
 export interface CurrentUser {
+    id: number;
     username: string;
+    role: 'member' | 'moderator' | 'admin';
 }
 
 export interface Greeting {

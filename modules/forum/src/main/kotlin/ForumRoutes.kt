@@ -1,7 +1,8 @@
 package dev.nilsschlegel.forum.forum
 
+import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
-import dev.nilsschlegel.forum.accounts.UserSession
+import dev.nilsschlegel.forum.accounts.UserDirectory
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -16,10 +17,10 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 
-/** Serves the forum under `/api`: categories, threads and posts. Needs [dev.nilsschlegel.forum.accounts.accounts] installed. */
-fun Application.forum() {
+/** Serves the forum under `/api`: categories, threads and posts. Needs [dev.nilsschlegel.forum.accounts.accounts] installed first. */
+fun Application.forum(users: UserDirectory) {
     routing {
-        forumRoutes(ExposedForumRepository())
+        forumRoutes(ExposedForumRepository(users))
     }
 }
 
@@ -39,12 +40,12 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
             post("/categories/{slug}/threads") {
                 val new = call.receive<NewThread>()
                 val thread =
-                    forum.createThread(call.slug(), call.username(), new.title.trim(), new.body.trim()) ?: throw NotFoundException()
+                    forum.createThread(call.slug(), call.userId(), new.title.trim(), new.body.trim()) ?: throw NotFoundException()
                 call.respond(HttpStatusCode.Created, thread)
             }
             post("/threads/{id}/posts") {
                 val new = call.receive<NewPost>()
-                val post = forum.reply(call.threadId(), call.username(), new.body.trim()) ?: throw NotFoundException()
+                val post = forum.reply(call.threadId(), call.userId(), new.body.trim()) ?: throw NotFoundException()
                 call.respond(HttpStatusCode.Created, post)
             }
         }
@@ -55,4 +56,4 @@ private fun ApplicationCall.slug(): String = parameters["slug"] ?: throw NotFoun
 
 private fun ApplicationCall.threadId(): Long = parameters["id"]?.toLongOrNull() ?: throw NotFoundException()
 
-private fun ApplicationCall.username(): String = principal<UserSession>()!!.username
+private fun ApplicationCall.userId(): Long = principal<AuthUser>()!!.id

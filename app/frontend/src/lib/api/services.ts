@@ -29,7 +29,7 @@ export interface ApiErrors {
 }
 
 const errorStatuses: Record<string, number[]> = {
-    'auth.login': [401],
+    'auth.login': [401, 403],
     'auth.register': [409],
 };
 

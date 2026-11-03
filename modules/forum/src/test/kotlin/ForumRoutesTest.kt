@@ -1,7 +1,8 @@
 package dev.nilsschlegel.forum.forum
 
+import dev.nilsschlegel.forum.accounts.AuthUser
+import dev.nilsschlegel.forum.accounts.Role
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
-import dev.nilsschlegel.forum.accounts.UserSession
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -37,22 +38,29 @@ private class FakeForumRepository : ForumRepository {
 
     override suspend fun createThread(
         categorySlug: String,
-        author: String,
+        authorId: Long,
         title: String,
         body: String,
     ): ThreadDetail? {
         if (categorySlug != "general") return null
         val id = threads.size + 1L
-        return ThreadDetail(id, categorySlug, title, author, NOW, listOf(Post(1, author, body, NOW))).also { threads += it }
+        return ThreadDetail(
+            id,
+            categorySlug,
+            title,
+            "user$authorId",
+            NOW,
+            listOf(Post(1, "user$authorId", body, NOW)),
+        ).also { threads += it }
     }
 
     override suspend fun reply(
         threadId: Long,
-        author: String,
+        authorId: Long,
         body: String,
     ): Post? {
         val thread = thread(threadId) ?: return null
-        val post = Post(thread.posts.size + 1L, author, body, NOW)
+        val post = Post(thread.posts.size + 1L, "user$authorId", body, NOW)
         threads[threads.indexOf(thread)] = thread.copy(posts = thread.posts + post)
         return post
     }
@@ -70,7 +78,7 @@ private class TestAuth(
 
     override suspend fun onAuthenticate(context: AuthenticationContext) {
         if (context.call.request.headers["X-Anonymous"] == null) {
-            context.principal(UserSession("alice"))
+            context.principal(AuthUser(1, "alice", Role.MEMBER))
         } else {
             context.challenge("test", AuthenticationFailedCause.NoCredentials) { challenge, call ->
                 call.respond(HttpStatusCode.Unauthorized)

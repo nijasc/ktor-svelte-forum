@@ -48,12 +48,14 @@ private const val SALT_BYTES = 16
 
 @Serializable
 data class UserSession(
-    val username: String,
+    val userId: Long,
 )
 
 @Serializable
 data class CurrentUser(
+    val id: Long,
     val username: String,
+    val role: Role,
 )
 
 @Serializable
@@ -71,24 +73,17 @@ data class Credentials(
     }
 }
 
-internal interface UserStore {
-    suspend fun create(
-        username: String,
-        passwordHash: String,
-    ): Boolean
-
-    suspend fun passwordHash(username: String): String?
-}
-
 /** Installs sessions and the [SESSION_AUTH] authentication, and serves the `/api/auth` routes. */
-fun Application.accounts() {
-    configureAuth()
+fun Application.accounts(): UserDirectory {
+    val store = DatabaseUserStore()
+    configureAuth(store)
     routing {
-        authRoutes(DatabaseUserStore())
+        authRoutes(store)
     }
+    return store
 }
 
-internal fun Application.configureAuth() {
+internal fun Application.configureAuth(users: UserStore) {
     val secret = env("SESSION_SECRET") ?: temporarySecret()
     require(secret.length >= MIN_SECRET_LENGTH) { "SESSION_SECRET needs at least $MIN_SECRET_LENGTH characters." }
     install(Sessions) {
@@ -103,7 +98,8 @@ internal fun Application.configureAuth() {
     }
     install(Authentication) {
         session<UserSession>(SESSION_AUTH) {
-            validate { it }
+            // Load the user on every request, so a changed role or a ban applies at once.
+            validate { session -> users.findById(session.userId)?.takeIf { it.status == UserStatus.ACTIVE }?.toAuthUser() }
             challenge { call.respond(HttpStatusCode.Unauthorized, Problem("Sign in first.")) }
         }
     }
@@ -114,23 +110,28 @@ internal fun Route.authRoutes(users: UserStore) {
     route("/api/auth") {
         post("/register") {
             val credentials = call.receive<Credentials>()
-            if (!users.create(credentials.username, hashPassword(credentials.password))) {
+            val user = users.create(credentials.username.trim(), hashPassword(credentials.password))
+            if (user == null) {
                 call.respond(HttpStatusCode.Conflict, Problem("That username is taken."))
                 return@post
             }
-            call.sessions.set(UserSession(credentials.username))
-            call.respond(HttpStatusCode.Created, CurrentUser(credentials.username))
+            call.sessions.set(UserSession(user.id))
+            call.respond(HttpStatusCode.Created, user.toCurrentUser())
         }
         post("/login") {
             val credentials = call.receive<Credentials>()
-            val stored = users.passwordHash(credentials.username)
-            val matches = verifyPassword(credentials.password, stored ?: unknownUserHash)
-            if (stored == null || !matches) {
+            val user = users.findByUsername(credentials.username.trim())
+            val matches = verifyPassword(credentials.password, user?.passwordHash ?: unknownUserHash)
+            if (user == null || !matches) {
                 call.respond(HttpStatusCode.Unauthorized, Problem("Wrong username or password."))
                 return@post
             }
-            call.sessions.set(UserSession(credentials.username))
-            call.respond(CurrentUser(credentials.username))
+            if (user.status != UserStatus.ACTIVE) {
+                call.respond(HttpStatusCode.Forbidden, Problem("This account is suspended."))
+                return@post
+            }
+            call.sessions.set(UserSession(user.id))
+            call.respond(user.toCurrentUser())
         }
         post("/logout") {
             call.sessions.clear<UserSession>()
@@ -138,11 +139,14 @@ internal fun Route.authRoutes(users: UserStore) {
         }
         authenticate(SESSION_AUTH) {
             get("/me") {
-                call.respond(CurrentUser(call.principal<UserSession>()!!.username))
+                val user = call.principal<AuthUser>()!!
+                call.respond(CurrentUser(user.id, user.username, user.role))
             }
         }
     }
 }
+
+private fun UserRecord.toCurrentUser() = CurrentUser(id, username, role)
 
 private fun Application.temporarySecret(): String {
     log.warn("SESSION_SECRET is not set, so everyone is signed out when the app restarts.")

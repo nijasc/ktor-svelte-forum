@@ -1,5 +1,6 @@
 package dev.nilsschlegel.forum.forum
 
+import dev.nilsschlegel.forum.accounts.UserDirectory
 import dev.nilsschlegel.forum.database.dbQuery
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -12,7 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 
 private const val MAX_SLUG_COLUMN = 64
 private const val MAX_TITLE_COLUMN = 200
-private const val MAX_AUTHOR_COLUMN = 64
+private const val DELETED_USER = "deleted"
 
 internal object Categories : Table("categories") {
     val id = long("id").autoIncrement()
@@ -28,7 +29,7 @@ internal object Threads : Table("threads") {
     val id = long("id").autoIncrement()
     val categoryId = long("category_id").references(Categories.id)
     val title = varchar("title", MAX_TITLE_COLUMN)
-    val author = varchar("author", MAX_AUTHOR_COLUMN)
+    val authorId = long("author_id")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 
     override val primaryKey = PrimaryKey(id)
@@ -37,14 +38,16 @@ internal object Threads : Table("threads") {
 internal object Posts : Table("posts") {
     val id = long("id").autoIncrement()
     val threadId = long("thread_id").references(Threads.id)
-    val author = varchar("author", MAX_AUTHOR_COLUMN)
+    val authorId = long("author_id")
     val body = text("body")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 
     override val primaryKey = PrimaryKey(id)
 }
 
-internal class ExposedForumRepository : ForumRepository {
+internal class ExposedForumRepository(
+    private val users: UserDirectory,
+) : ForumRepository {
     override suspend fun categories(): List<Category> =
         dbQuery {
             Categories
@@ -53,52 +56,63 @@ internal class ExposedForumRepository : ForumRepository {
                 .map { Category(it[Categories.slug], it[Categories.title], it[Categories.description]) }
         }
 
-    override suspend fun threads(categorySlug: String): List<ThreadSummary>? =
-        dbQuery {
-            val categoryId = categoryId(categorySlug) ?: return@dbQuery null
-            Threads
-                .selectAll()
-                .where { Threads.categoryId eq categoryId }
-                .orderBy(Threads.createdAt, SortOrder.DESC)
-                .map {
-                    ThreadSummary(it[Threads.id], it[Threads.title], it[Threads.author], it[Threads.createdAt].toString())
-                }
+    override suspend fun threads(categorySlug: String): List<ThreadSummary>? {
+        val rows =
+            dbQuery {
+                val categoryId = categoryId(categorySlug) ?: return@dbQuery null
+                Threads
+                    .selectAll()
+                    .where { Threads.categoryId eq categoryId }
+                    .orderBy(Threads.createdAt, SortOrder.DESC)
+                    .toList()
+            } ?: return null
+        val names = users.usernames(rows.map { it[Threads.authorId] })
+        return rows.map {
+            ThreadSummary(
+                it[Threads.id],
+                it[Threads.title],
+                names.nameOf(it[Threads.authorId]),
+                it[Threads.createdAt].toString(),
+            )
         }
+    }
 
-    override suspend fun thread(id: Long): ThreadDetail? = dbQuery { loadThread(id) }
+    override suspend fun thread(id: Long): ThreadDetail? = loadThread(id)
 
     override suspend fun createThread(
         categorySlug: String,
-        author: String,
+        authorId: Long,
         title: String,
         body: String,
-    ): ThreadDetail? =
-        dbQuery {
-            val categoryId = categoryId(categorySlug) ?: return@dbQuery null
-            val threadId =
-                Threads.insert {
-                    it[Threads.categoryId] = categoryId
-                    it[Threads.title] = title
-                    it[Threads.author] = author
-                }[Threads.id]
-            insertPost(threadId, author, body)
-            loadThread(threadId)
-        }
+    ): ThreadDetail? {
+        val threadId =
+            dbQuery {
+                val categoryId = categoryId(categorySlug) ?: return@dbQuery null
+                val id =
+                    Threads.insert {
+                        it[Threads.categoryId] = categoryId
+                        it[Threads.title] = title
+                        it[Threads.authorId] = authorId
+                    }[Threads.id]
+                insertPost(id, authorId, body)
+                id
+            } ?: return null
+        return loadThread(threadId)
+    }
 
     override suspend fun reply(
         threadId: Long,
-        author: String,
+        authorId: Long,
         body: String,
-    ): Post? =
-        dbQuery {
-            if (Threads.selectAll().where { Threads.id eq threadId }.empty()) return@dbQuery null
-            val postId = insertPost(threadId, author, body)
-            Posts
-                .selectAll()
-                .where { Posts.id eq postId }
-                .single()
-                .toPost()
-        }
+    ): Post? {
+        val row =
+            dbQuery {
+                if (Threads.selectAll().where { Threads.id eq threadId }.empty()) return@dbQuery null
+                val postId = insertPost(threadId, authorId, body)
+                Posts.selectAll().where { Posts.id eq postId }.single()
+            } ?: return null
+        return row.toPost(users.usernames(listOf(authorId)))
+    }
 
     private fun categoryId(slug: String): Long? =
         Categories
@@ -109,37 +123,44 @@ internal class ExposedForumRepository : ForumRepository {
 
     private fun insertPost(
         threadId: Long,
-        author: String,
+        authorId: Long,
         body: String,
     ): Long =
         Posts.insert {
             it[Posts.threadId] = threadId
-            it[Posts.author] = author
+            it[Posts.authorId] = authorId
             it[Posts.body] = body
         }[Posts.id]
 
-    private fun loadThread(id: Long): ThreadDetail? {
-        val thread =
-            (Threads innerJoin Categories)
-                .selectAll()
-                .where { Threads.id eq id }
-                .singleOrNull() ?: return null
-        val posts =
-            Posts
-                .selectAll()
-                .where { Posts.threadId eq id }
-                .orderBy(Posts.createdAt)
-                .orderBy(Posts.id)
-                .map { it.toPost() }
+    private suspend fun loadThread(id: Long): ThreadDetail? {
+        val (thread, posts) =
+            dbQuery {
+                val thread =
+                    (Threads innerJoin Categories)
+                        .selectAll()
+                        .where { Threads.id eq id }
+                        .singleOrNull() ?: return@dbQuery null
+                thread to
+                    Posts
+                        .selectAll()
+                        .where { Posts.threadId eq id }
+                        .orderBy(Posts.createdAt)
+                        .orderBy(Posts.id)
+                        .toList()
+            } ?: return null
+        val names = users.usernames(posts.map { it[Posts.authorId] } + thread[Threads.authorId])
         return ThreadDetail(
             id = thread[Threads.id],
             category = thread[Categories.slug],
             title = thread[Threads.title],
-            author = thread[Threads.author],
+            author = names.nameOf(thread[Threads.authorId]),
             createdAt = thread[Threads.createdAt].toString(),
-            posts = posts,
+            posts = posts.map { it.toPost(names) },
         )
     }
 
-    private fun ResultRow.toPost() = Post(this[Posts.id], this[Posts.author], this[Posts.body], this[Posts.createdAt].toString())
+    private fun ResultRow.toPost(names: Map<Long, String>) =
+        Post(this[Posts.id], names.nameOf(this[Posts.authorId]), this[Posts.body], this[Posts.createdAt].toString())
+
+    private fun Map<Long, String>.nameOf(userId: Long) = this[userId] ?: DELETED_USER
 }
