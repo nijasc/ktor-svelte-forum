@@ -2,9 +2,15 @@ package dev.nilsschlegel.forum.core
 
 import java.io.File
 
+/** The first `.env` in the working directory or above it. Gradle runs the app from `app/`, the file sits in the repo root. */
+private fun findEnvFile(): File? =
+    generateSequence(File("").absoluteFile) {
+        it.parentFile
+    }.map { it.resolve(".env") }.firstOrNull { it.isFile }
+
 private val localEnv: Map<String, String> by lazy {
-    val file = File(".env")
-    if (!file.isFile) {
+    val file = findEnvFile()
+    if (file == null) {
         emptyMap()
     } else {
         file
