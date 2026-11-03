@@ -1,5 +1,3 @@
-export type User = { username: string };
-
 type ErrorBody = { message?: string; fields?: Record<string, string[]> };
 
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
@@ -28,9 +26,4 @@ export async function signUp(username: string, password: string): Promise<void> 
 
 export async function signOut(): Promise<void> {
     await request('logout', { method: 'POST' });
-}
-
-export async function currentUser(): Promise<User | null> {
-    const response = await fetch('/api/auth/me');
-    return response.ok ? response.json() : null;
 }
