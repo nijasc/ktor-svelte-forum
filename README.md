@@ -59,6 +59,8 @@ The app reads the environment first, then a `.env` file in the working directory
 | `COOKIE_SECURE` | Send the session cookie over HTTPS only. Defaults to `true`, so set `false` only for local HTTP |
 | `DATABASE_URL` | JDBC URL of the Postgres database |
 | `INITIAL_ADMIN` | The username that becomes an admin when it signs up, as long as there is no admin yet. Leave empty for none |
+| `MAIL_PROVIDER` | `log` writes emails to the log, which is the default and needs no account. `resend` sends through Resend |
+| `RESEND_API_KEY`, `MAIL_FROM` | Needed when `MAIL_PROVIDER` is `resend`. `MAIL_FROM` looks like `Forum <forum@example.com>` |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Used by `compose.yaml` and by the app |
 
 ## Modules
@@ -71,6 +73,7 @@ modules/
   accounts/     Register, login, sessions and users
   forum/        Categories, threads and posts
   moderation/   Reports, bans, the audit log and the staff routes
+  mail/         Sending email, to the log or through Resend
 build-logic/    Convention plugins
 ```
 
