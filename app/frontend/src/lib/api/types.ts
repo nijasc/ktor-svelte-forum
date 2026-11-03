@@ -187,6 +187,22 @@ export interface RoleChange {
     role: 'member' | 'moderator' | 'admin';
 }
 
+export interface SearchHit {
+    kind: 'thread' | 'post';
+    threadId: number;
+    postId?: number | null;
+    threadTitle: string;
+    snippet: string;
+    author: string;
+    category: string;
+    createdAt: string;
+}
+
+export interface SearchPage {
+    items: SearchHit[];
+    next?: string | null;
+}
+
 export interface StaffCategory {
     slug: string;
     title: string;

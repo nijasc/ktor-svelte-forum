@@ -618,6 +618,46 @@
                 ]
             }
         },
+        "/api/search": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchPage"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/staff/audit": {
             "get": {
                 "summary": "",
@@ -2362,6 +2402,73 @@
                 "properties": {
                     "watching": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "SearchHit": {
+                "type": "object",
+                "title": "SearchHit",
+                "required": [
+                    "kind",
+                    "threadId",
+                    "threadTitle",
+                    "snippet",
+                    "author",
+                    "category",
+                    "createdAt"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "thread",
+                            "post"
+                        ]
+                    },
+                    "threadId": {
+                        "type": "integer"
+                    },
+                    "postId": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "threadTitle": {
+                        "type": "string"
+                    },
+                    "snippet": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "SearchPage": {
+                "type": "object",
+                "title": "SearchPage",
+                "required": [
+                    "items"
+                ],
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SearchHit"
+                        }
+                    },
+                    "next": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 }
             }

@@ -10,6 +10,14 @@
 
     let { children } = $props();
 
+    let searchText = $state('');
+
+    function search(event: SubmitEvent) {
+        event.preventDefault();
+        const text = searchText.trim();
+        if (text) goto(link(`/search?q=${encodeURIComponent(text)}`));
+    }
+
     onMount(refreshSession);
 
     // Keep the bell fresh: when the reader moves between pages, and once a minute while the tab is open.
@@ -31,7 +39,20 @@
 <header class="navbar bg-base-100 shadow-sm">
     <div class="mx-auto flex w-full max-w-4xl items-center justify-between px-4">
         <a class="text-xl font-bold" href={link('/')}>{m.siteName()}</a>
+        <form class="hidden sm:block" role="search" onsubmit={search}>
+            <input
+                class="input input-sm w-44"
+                type="search"
+                bind:value={searchText}
+                placeholder={m.searchPlaceholder()}
+                aria-label={m.searchTitle()}
+                maxlength="200"
+            />
+        </form>
         <nav class="flex items-center gap-2">
+            <a class="btn btn-ghost btn-sm sm:hidden" href={link('/search')} aria-label={m.searchTitle()}>
+                <Icon name="Search" />
+            </a>
             {#if session.user}
                 {#if isStaff(session.user)}
                     <a class="btn btn-ghost btn-sm" href={link('/staff')}>{m.navStaff()}</a>

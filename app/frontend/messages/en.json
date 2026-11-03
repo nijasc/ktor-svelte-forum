@@ -142,5 +142,12 @@
   "reaction_like": "Like",
   "reaction_love": "Love",
   "reaction_laugh": "Funny",
-  "reaction_celebrate": "Celebrate"
+  "reaction_celebrate": "Celebrate",
+  "search_title": "Search",
+  "search_placeholder": "Search the forum",
+  "search_empty": "Nothing found.",
+  "search_hint": "Tip: use quotes for an exact phrase, OR for either word, and a minus sign to leave a word out.",
+  "search_thread_hit": "Thread",
+  "search_post_hit": "Post",
+  "search_in": "in {category}"
 }

@@ -142,5 +142,12 @@
   "reaction_like": "Gefällt mir",
   "reaction_love": "Liebe",
   "reaction_laugh": "Lustig",
-  "reaction_celebrate": "Feiern"
+  "reaction_celebrate": "Feiern",
+  "search_title": "Suche",
+  "search_placeholder": "Im Forum suchen",
+  "search_empty": "Nichts gefunden.",
+  "search_hint": "Tipp: Anführungszeichen für eine genaue Wendung, OR für eines von zwei Wörtern und ein Minus, um ein Wort auszuschließen.",
+  "search_thread_hit": "Thema",
+  "search_post_hit": "Beitrag",
+  "search_in": "in {category}"
 }

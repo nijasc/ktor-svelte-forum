@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, ChangeEmail, Credentials, CurrentUser, ForgotPassword, Greeting, MoveThread, NewCategory, NewPost, NewReaction, NewReport, NewThread, NotificationPage, Post, PostReactions, Problem, Profile, Registration, ReportPage, ResetPassword, ResolveReport, RoleChange, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UnreadCount, UpdateCategory, VerifyEmail, WatchState } from './types.js';
+import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, ChangeEmail, Credentials, CurrentUser, ForgotPassword, Greeting, MoveThread, NewCategory, NewPost, NewReaction, NewReport, NewThread, NotificationPage, Post, PostReactions, Problem, Profile, Registration, ReportPage, ResetPassword, ResolveReport, RoleChange, SearchPage, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UnreadCount, UpdateCategory, VerifyEmail, WatchState } from './types.js';
 
 export const auth = {
     putEmail: (body: ChangeEmail, options?: RequestOptions) => request<CurrentUser>('PUT', '/api/auth/email', { ...options, body, operation: 'auth.putEmail' }),
@@ -36,6 +36,10 @@ export const posts = {
     putReaction: (id: string | number, body: NewReaction, options?: RequestOptions) => request<PostReactions>('PUT', `/api/posts/${encodeURIComponent(id)}/reaction`, { ...options, body, operation: 'posts.putReaction' }),
     deleteReaction: (id: string | number, options?: RequestOptions) => request<PostReactions>('DELETE', `/api/posts/${encodeURIComponent(id)}/reaction`, { ...options, operation: 'posts.deleteReaction' }),
     reports: (id: string | number, body: NewReport, options?: RequestOptions) => request<void>('POST', `/api/posts/${encodeURIComponent(id)}/reports`, { ...options, body, operation: 'posts.reports' }),
+};
+
+export const search = {
+    list: (query?: { q?: string; limit?: string; cursor?: string }, options?: RequestOptions) => request<SearchPage>('GET', '/api/search', { ...options, query, operation: 'search.list' }),
 };
 
 export const staff = {
@@ -90,4 +94,4 @@ export function isApiError<K extends keyof ApiErrors>(error: unknown, operation:
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
 }
 
-export const api = { auth, categories, hello, notifications, posts, staff, threads, users };
+export const api = { auth, categories, hello, notifications, posts, search, staff, threads, users };
