@@ -72,7 +72,7 @@ Do this before building pages, while there is no data to migrate.
 - [x] Pages: category list, thread list, thread with replies, new thread, reply box (`app`)
 - [x] Markdown in posts, rendered safely. Stored as Markdown and rendered in the browser with `marked` and DOMPurify, which keeps a short list of tags and drops images, scripts, styles and `javascript:` links
 - [x] Edit and delete your own posts, with an "edited" mark. The first post of a thread can be edited but not deleted 
-- [ ] Thread titles and bodies validated the same way on client and server
+- [x] Thread titles and bodies validated the same way on client and server. The editor enforces the same limits, and `FrontendLimitsTest` fails if the two copies drift
 - [x] German and English strings for every page (`app/frontend/messages`)
 - [x] Empty, loading and error states for each page
 

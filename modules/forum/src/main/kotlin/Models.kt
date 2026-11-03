@@ -4,8 +4,8 @@ import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
 import kotlinx.serialization.Serializable
 
-private const val MAX_TITLE_LENGTH = 200
-private const val MAX_BODY_LENGTH = 20_000
+internal const val MAX_TITLE_LENGTH = 200
+internal const val MAX_BODY_LENGTH = 20_000
 
 @Serializable
 data class Category(
