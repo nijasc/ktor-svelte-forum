@@ -381,6 +381,33 @@
                     }
                 ]
             }
+        },
+        "/api/users/{username}": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Profile"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -435,6 +462,31 @@
                             "moderator",
                             "admin"
                         ]
+                    }
+                }
+            },
+            "Profile": {
+                "type": "object",
+                "title": "Profile",
+                "required": [
+                    "username",
+                    "role",
+                    "joinedAt"
+                ],
+                "properties": {
+                    "username": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "moderator",
+                            "admin"
+                        ]
+                    },
+                    "joinedAt": {
+                        "type": "string"
                     }
                 }
             },

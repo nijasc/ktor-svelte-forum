@@ -58,6 +58,7 @@ The app reads the environment first, then a `.env` file in the working directory
 | `SESSION_SECRET` | Signs session cookies, at least 32 characters. Without it, a new one is made at each start and everyone is signed out |
 | `COOKIE_SECURE` | Send the session cookie over HTTPS only. Defaults to `true`, so set `false` only for local HTTP |
 | `DATABASE_URL` | JDBC URL of the Postgres database |
+| `INITIAL_ADMIN` | The username that becomes an admin when it signs up, as long as there is no admin yet. Leave empty for none |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Used by `compose.yaml` and by the app |
 
 ## Modules

@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, ThreadDetail, ThreadPage } from './types.js';
+import type { Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, Profile, ThreadDetail, ThreadPage } from './types.js';
 
 export const auth = {
     login: (body: Credentials, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/login', { ...options, body, operation: 'auth.login' }),
@@ -28,6 +28,10 @@ export const threads = {
     posts: (id: string | number, body: NewPost, options?: RequestOptions) => request<Post>('POST', `/api/threads/${encodeURIComponent(id)}/posts`, { ...options, body, operation: 'threads.posts' }),
 };
 
+export const users = {
+    get: (username: string | number, options?: RequestOptions) => request<Profile>('GET', `/api/users/${encodeURIComponent(username)}`, { ...options, operation: 'users.get' }),
+};
+
 export interface ApiErrors {
     'auth.login': Problem;
     'auth.register': Problem;
@@ -42,4 +46,4 @@ export function isApiError<K extends keyof ApiErrors>(error: unknown, operation:
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
 }
 
-export const api = { auth, categories, hello, posts, threads };
+export const api = { auth, categories, hello, posts, threads, users };

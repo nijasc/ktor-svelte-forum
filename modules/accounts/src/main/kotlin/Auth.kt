@@ -76,11 +76,12 @@ data class Credentials(
 }
 
 /** Installs sessions and the [SESSION_AUTH] authentication, and serves the `/api/auth` routes. */
-fun Application.accounts(): UserDirectory {
-    val store = DatabaseUserStore()
+fun Application.accounts(): Accounts {
+    val store = DatabaseUserStore(env("INITIAL_ADMIN"))
     configureAuth(store)
     routing {
         authRoutes(store)
+        profileRoutes(store)
     }
     return store
 }

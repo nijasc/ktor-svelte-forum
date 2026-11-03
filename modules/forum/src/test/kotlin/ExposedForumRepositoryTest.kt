@@ -18,7 +18,11 @@ private val FIRST_PAGE = PageRequest(null, 20)
 class ExposedForumRepositoryTest {
     private val directory =
         object : UserDirectory {
-            override suspend fun usernames(ids: Collection<Long>) = mapOf(ALICE to "alice", BOB to "bob").filterKeys { it in ids }
+            private val names = mapOf(ALICE to "alice", BOB to "bob")
+
+            override suspend fun usernames(ids: Collection<Long>) = names.filterKeys { it in ids }
+
+            override suspend fun idOf(username: String) = names.entries.firstOrNull { it.value == username }?.key
         }
     private val forum = ExposedForumRepository(directory)
 
@@ -113,7 +117,14 @@ class ExposedForumRepositoryTest {
     fun `shows deleted for an author with no user`() =
         runBlocking {
             val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
-            val withoutNames = ExposedForumRepository(UserDirectory { emptyMap() })
+            val withoutNames =
+                ExposedForumRepository(
+                    object : UserDirectory {
+                        override suspend fun usernames(ids: Collection<Long>) = emptyMap<Long, String>()
+
+                        override suspend fun idOf(username: String): Long? = null
+                    },
+                )
             assertEquals("deleted", withoutNames.thread(thread.id, FIRST_PAGE)?.author)
         }
 

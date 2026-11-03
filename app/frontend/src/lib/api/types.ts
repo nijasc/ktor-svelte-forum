@@ -46,6 +46,12 @@ export interface Problem {
     message: string;
 }
 
+export interface Profile {
+    username: string;
+    role: 'member' | 'moderator' | 'admin';
+    joinedAt: string;
+}
+
 export interface ThreadDetail {
     id: number;
     category: string;

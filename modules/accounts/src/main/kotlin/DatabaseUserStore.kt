@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 private const val MAX_USERNAME_COLUMN = 64
 private const val MAX_HASH_COLUMN = 255
@@ -29,19 +30,26 @@ internal object Users : Table("users") {
     override val primaryKey = PrimaryKey(id)
 }
 
-internal class DatabaseUserStore :
-    UserStore,
-    UserDirectory {
+/**
+ * [initialAdmin] is the one username that becomes an admin when it signs up, and only while there is no admin yet.
+ * That is how the first admin is made without touching the database by hand.
+ */
+internal class DatabaseUserStore(
+    private val initialAdmin: String? = null,
+) : UserStore,
+    Accounts {
     override suspend fun create(
         username: String,
         passwordHash: String,
     ): UserRecord? =
         dbQuery {
+            val first =
+                initialAdmin.equals(username, ignoreCase = true) && Users.selectAll().where { Users.role eq Role.ADMIN.column }.empty()
             val inserted =
                 Users.insertIgnore {
                     it[Users.username] = username
                     it[Users.passwordHash] = passwordHash
-                    it[role] = Role.MEMBER.column
+                    it[role] = if (first) Role.ADMIN.column else Role.MEMBER.column
                     it[status] = UserStatus.ACTIVE.column
                 }
             if (inserted.insertedCount == 0) null else byUsername(username)
@@ -70,6 +78,29 @@ internal class DatabaseUserStore :
             }
         }
 
+    override suspend fun idOf(username: String): Long? = dbQuery { byUsername(username)?.id }
+
+    override suspend fun find(username: String): UserSummary? = dbQuery { byUsername(username)?.toSummary() }
+
+    override suspend fun setStatus(
+        userId: Long,
+        status: UserStatus,
+    ) {
+        dbQuery { Users.update({ Users.id eq userId }) { it[Users.status] = status.column } }
+    }
+
+    override suspend fun setRole(
+        userId: Long,
+        role: Role,
+    ) {
+        dbQuery { Users.update({ Users.id eq userId }) { it[Users.role] = role.column } }
+    }
+
+    suspend fun profile(username: String): Profile? =
+        dbQuery { byUsername(username)?.let { Profile(it.username, it.role, it.createdAt.toString()) } }
+
+    private fun noAdminYet() = Users.selectAll().where { Users.role eq Role.ADMIN.column }.empty()
+
     private fun byUsername(username: String): UserRecord? =
         Users
             .selectAll()
@@ -84,5 +115,6 @@ internal class DatabaseUserStore :
             passwordHash = this[Users.passwordHash],
             role = Role.fromColumn(this[Users.role]),
             status = UserStatus.fromColumn(this[Users.status]),
+            createdAt = this[Users.createdAt],
         )
 }
