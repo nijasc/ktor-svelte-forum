@@ -82,6 +82,10 @@ export interface NewPost {
     body: string;
 }
 
+export interface NewReaction {
+    kind: 'like' | 'love' | 'laugh' | 'celebrate';
+}
+
 export interface NewReport {
     reason: string;
 }
@@ -117,11 +121,18 @@ export interface Post {
     editedAt?: string | null;
     deleted?: boolean;
     hidden?: boolean;
+    reactions?: Record<string, number>;
+    myReaction?: string | null;
 }
 
 export interface PostPage {
     items: Post[];
     next?: string | null;
+}
+
+export interface PostReactions {
+    reactions: Record<string, number>;
+    myReaction?: string | null;
 }
 
 export interface Problem {

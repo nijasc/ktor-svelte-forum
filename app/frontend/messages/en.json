@@ -138,5 +138,9 @@
   "mark_all_read": "Mark all as read",
   "watch": "Watch",
   "unwatch": "Stop watching",
-  "watching": "Watching"
+  "watching": "Watching",
+  "reaction_like": "Like",
+  "reaction_love": "Love",
+  "reaction_laugh": "Funny",
+  "reaction_celebrate": "Celebrate"
 }

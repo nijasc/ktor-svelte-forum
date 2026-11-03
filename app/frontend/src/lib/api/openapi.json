@@ -513,6 +513,77 @@
                 ]
             }
         },
+        "/api/posts/{id}/reaction": {
+            "put": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NewReaction"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PostReactions"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "delete": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PostReactions"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
         "/api/posts/{id}/reports": {
             "post": {
                 "summary": "",
@@ -1155,7 +1226,7 @@
         },
         "/api/threads/{id}": {
             "get": {
-                "summary": "",
+                "summary": "Readers who are signed in also see which reaction they chose. Visitors read the same thread without one.",
                 "parameters": [
                     {
                         "name": "id",
@@ -1191,7 +1262,13 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "session": []
+                    },
+                    {}
+                ]
             }
         },
         "/api/threads/{id}/posts": {
@@ -1709,6 +1786,18 @@
                     },
                     "hidden": {
                         "type": "boolean"
+                    },
+                    "reactions": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "myReaction": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 }
             },
@@ -1800,6 +1889,45 @@
                 "properties": {
                     "body": {
                         "type": "string"
+                    }
+                }
+            },
+            "NewReaction": {
+                "type": "object",
+                "title": "NewReaction",
+                "required": [
+                    "kind"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "like",
+                            "love",
+                            "laugh",
+                            "celebrate"
+                        ]
+                    }
+                }
+            },
+            "PostReactions": {
+                "type": "object",
+                "title": "PostReactions",
+                "required": [
+                    "reactions"
+                ],
+                "properties": {
+                    "reactions": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "myReaction": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 }
             },

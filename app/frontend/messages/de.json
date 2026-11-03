@@ -138,5 +138,9 @@
   "mark_all_read": "Alle als gelesen markieren",
   "watch": "Beobachten",
   "unwatch": "Nicht mehr beobachten",
-  "watching": "Beobachtet"
+  "watching": "Beobachtet",
+  "reaction_like": "Gefällt mir",
+  "reaction_love": "Liebe",
+  "reaction_laugh": "Lustig",
+  "reaction_celebrate": "Feiern"
 }

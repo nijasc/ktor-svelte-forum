@@ -1,12 +1,13 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { api, type Category, type Post, type ThreadDetail } from '#api';
+    import { api, type Category, type Post, type PostReactions, type ThreadDetail } from '#api';
     import { localizeHref as link, m } from '#i18n';
     import { errorMessage } from '#lib/errors.ts';
     import { formatAgo, formatDateTime, formatReplies } from '#lib/format.ts';
     import { MAX_BODY_LENGTH } from '#lib/limits.ts';
     import Markdown from '#lib/Markdown.svelte';
     import PostEditor from '#lib/PostEditor.svelte';
+    import ReactionBar from '#lib/ReactionBar.svelte';
     import { isStaff } from '#lib/roles.ts';
     import { session } from '#lib/session.svelte.ts';
     import State from '#lib/State.svelte';
@@ -167,6 +168,10 @@
         if (category && thread) act(() => api.staff.threadsMove(thread!.id, { category }));
     }
 
+    function setReactions(post: Post, reactions: PostReactions) {
+        posts = posts.map((candidate) => (candidate.id === post.id ? { ...candidate, ...reactions } : candidate));
+    }
+
     function isAuthorLink(post: Post): boolean {
         return post.author !== 'deleted';
     }
@@ -297,6 +302,11 @@
                             </form>
                         {:else}
                             <Markdown source={post.body} />
+                            <ReactionBar
+                                {post}
+                                canReact={!!session.user?.emailVerified}
+                                onchange={(reactions) => setReactions(post, reactions)}
+                            />
                             {#if isMine(post)}
                                 <div class="flex gap-2">
                                     <button class="btn btn-ghost btn-xs" onclick={() => startEdit(post)}
