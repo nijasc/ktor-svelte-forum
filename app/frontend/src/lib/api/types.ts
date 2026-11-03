@@ -33,6 +33,8 @@ export interface Post {
     author: string;
     body: string;
     createdAt: string;
+    editedAt?: string | null;
+    deleted?: boolean;
 }
 
 export interface PostPage {

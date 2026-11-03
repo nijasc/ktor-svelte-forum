@@ -42,8 +42,11 @@ data class PostPage(
 data class Post(
     val id: Long,
     val author: String,
+    /** Empty when the post is [deleted]. */
     val body: String,
     val createdAt: String,
+    val editedAt: String? = null,
+    val deleted: Boolean = false,
 )
 
 @Serializable

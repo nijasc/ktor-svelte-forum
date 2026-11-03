@@ -41,4 +41,30 @@ internal interface ForumRepository {
         authorId: Long,
         body: String,
     ): Post?
+
+    /** Changes the text of the author's own post. */
+    suspend fun editPost(
+        postId: Long,
+        userId: Long,
+        body: String,
+    ): PostChange
+
+    /** Deletes the author's own post, except the first post of a thread. The text is kept but no longer shown. */
+    suspend fun deletePost(
+        postId: Long,
+        userId: Long,
+    ): PostChange
+}
+
+/** The outcome of editing or deleting a post. */
+internal sealed interface PostChange {
+    data class Done(
+        val post: Post,
+    ) : PostChange
+
+    data object NotFound : PostChange
+
+    data object NotYours : PostChange
+
+    data object IsFirstPost : PostChange
 }

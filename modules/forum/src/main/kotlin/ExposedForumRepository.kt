@@ -8,13 +8,16 @@ import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.minus
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.javatime.CurrentTimestamp
 import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
@@ -50,6 +53,8 @@ internal object Posts : Table("posts") {
     val authorId = long("author_id")
     val body = text("body")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+    val editedAt = timestamp("edited_at").nullable()
+    val deletedAt = timestamp("deleted_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -147,6 +152,55 @@ internal class ExposedForumRepository(
         return row.toPost(users.usernames(listOf(authorId)))
     }
 
+    override suspend fun editPost(
+        postId: Long,
+        userId: Long,
+        body: String,
+    ): PostChange =
+        change(postId, userId, allowFirst = true) {
+            Posts.update({ Posts.id eq postId }) {
+                it[Posts.body] = body
+                it[editedAt] = CurrentTimestamp
+            }
+        }
+
+    override suspend fun deletePost(
+        postId: Long,
+        userId: Long,
+    ): PostChange =
+        change(postId, userId, allowFirst = false) { post ->
+            Posts.update({ Posts.id eq postId }) { it[deletedAt] = CurrentTimestamp }
+            Threads.update({ Threads.id eq post[Posts.threadId] }) { it.update(replyCount, replyCount - 1) }
+        }
+
+    /** Checks the post exists, is live and is the user's, runs [apply], and returns the post as it is afterwards. */
+    private suspend fun change(
+        postId: Long,
+        userId: Long,
+        allowFirst: Boolean,
+        apply: (ResultRow) -> Unit,
+    ): PostChange {
+        val (failure, row) =
+            dbQuery {
+                val post =
+                    Posts.selectAll().where { (Posts.id eq postId) and Posts.deletedAt.isNull() }.singleOrNull()
+                        ?: return@dbQuery PostChange.NotFound to null
+                if (post[Posts.authorId] != userId) return@dbQuery PostChange.NotYours to null
+                val firstId =
+                    Posts
+                        .select(
+                            Posts.id,
+                        ).where { Posts.threadId eq post[Posts.threadId] }
+                        .orderBy(Posts.id)
+                        .limit(1)
+                        .single()[Posts.id]
+                if (!allowFirst && firstId == postId) return@dbQuery PostChange.IsFirstPost to null
+                apply(post)
+                null to Posts.selectAll().where { Posts.id eq postId }.single()
+            }
+        return failure ?: PostChange.Done(row!!.toPost(users.usernames(listOf(userId))))
+    }
+
     private fun categoryId(slug: String): Long? =
         Categories
             .selectAll()
@@ -195,7 +249,14 @@ internal class ExposedForumRepository(
     }
 
     private fun ResultRow.toPost(names: Map<Long, String>) =
-        Post(this[Posts.id], names.nameOf(this[Posts.authorId]), this[Posts.body], this[Posts.createdAt].toString())
+        Post(
+            id = this[Posts.id],
+            author = names.nameOf(this[Posts.authorId]),
+            body = if (this[Posts.deletedAt] == null) this[Posts.body] else "",
+            createdAt = this[Posts.createdAt].toString(),
+            editedAt = this[Posts.editedAt]?.toString(),
+            deleted = this[Posts.deletedAt] != null,
+        )
 
     private fun Map<Long, String>.nameOf(userId: Long) = this[userId] ?: DELETED_USER
 }

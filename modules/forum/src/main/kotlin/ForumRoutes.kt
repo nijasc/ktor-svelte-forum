@@ -3,6 +3,7 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
 import dev.nilsschlegel.forum.accounts.UserDirectory
+import dev.nilsschlegel.forum.core.ApiException
 import dev.nilsschlegel.forum.core.RateLimits
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -15,7 +16,9 @@ import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
@@ -51,6 +54,14 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
                     val post = forum.reply(call.threadId(), call.userId(), new.body.trim()) ?: throw NotFoundException()
                     call.respond(HttpStatusCode.Created, post)
                 }
+                patch("/posts/{id}") {
+                    val new = call.receive<NewPost>()
+                    call.respond(forum.editPost(call.postId(), call.userId(), new.body.trim()).post())
+                }
+                delete("/posts/{id}") {
+                    forum.deletePost(call.postId(), call.userId()).post()
+                    call.respond(HttpStatusCode.NoContent)
+                }
             }
         }
     }
@@ -65,6 +76,16 @@ private fun ApplicationCall.pageRequest(): PageRequest {
 }
 
 private fun ApplicationCall.slug(): String = parameters["slug"] ?: throw NotFoundException()
+
+private fun ApplicationCall.postId(): Long = parameters["id"]?.toLongOrNull() ?: throw NotFoundException()
+
+private fun PostChange.post(): Post =
+    when (this) {
+        is PostChange.Done -> post
+        PostChange.NotFound -> throw NotFoundException()
+        PostChange.NotYours -> throw ApiException(HttpStatusCode.Forbidden, "You can only change your own posts.")
+        PostChange.IsFirstPost -> throw ApiException(HttpStatusCode.Forbidden, "The first post of a thread cannot be deleted.")
+    }
 
 private fun ApplicationCall.threadId(): Long = parameters["id"]?.toLongOrNull() ?: throw NotFoundException()
 

@@ -18,6 +18,11 @@ export const hello = {
     list: (options?: RequestOptions) => request<Greeting>('GET', '/api/hello', { ...options, operation: 'hello.list' }),
 };
 
+export const posts = {
+    patch: (id: string | number, body: NewPost, options?: RequestOptions) => request<Post>('PATCH', `/api/posts/${encodeURIComponent(id)}`, { ...options, body, operation: 'posts.patch' }),
+    delete: (id: string | number, options?: RequestOptions) => request<void>('DELETE', `/api/posts/${encodeURIComponent(id)}`, { ...options, operation: 'posts.delete' }),
+};
+
 export const threads = {
     get: (id: string | number, query?: { limit?: string; cursor?: string }, options?: RequestOptions) => request<ThreadDetail>('GET', `/api/threads/${encodeURIComponent(id)}`, { ...options, query, operation: 'threads.get' }),
     posts: (id: string | number, body: NewPost, options?: RequestOptions) => request<Post>('POST', `/api/threads/${encodeURIComponent(id)}/posts`, { ...options, body, operation: 'threads.posts' }),
@@ -37,4 +42,4 @@ export function isApiError<K extends keyof ApiErrors>(error: unknown, operation:
     return error instanceof ApiError && error.operation === operation && (errorStatuses[operation] ?? []).includes(error.status);
 }
 
-export const api = { auth, categories, hello, threads };
+export const api = { auth, categories, hello, posts, threads };

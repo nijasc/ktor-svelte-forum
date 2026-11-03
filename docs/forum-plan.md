@@ -71,7 +71,7 @@ Do this before building pages, while there is no data to migrate.
 
 - [ ] Pages: category list, thread list, thread with replies, new thread, reply box (`app`)
 - [ ] Markdown in posts, rendered safely. Decide where it is sanitised (see open decisions)
-- [ ] Edit and delete your own posts, with an "edited" mark
+- [x] Edit and delete your own posts, with an "edited" mark. The first post of a thread can be edited but not deleted (backend; the UI comes with the pages)
 - [ ] Thread titles and bodies validated the same way on client and server
 - [ ] German and English strings for every page (`app/frontend/messages`)
 - [ ] Empty, loading and error states for each page

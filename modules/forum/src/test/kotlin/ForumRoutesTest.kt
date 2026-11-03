@@ -3,9 +3,12 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.Role
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
+import dev.nilsschlegel.forum.core.ApiException
 import dev.nilsschlegel.forum.core.RateLimits
 import dev.nilsschlegel.forum.core.configureRateLimits
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -82,6 +85,58 @@ private class FakeForumRepository : ForumRepository {
         return post
     }
 
+    /** Adds a reply by a given user without going through the routes, so tests can set up other people's posts. */
+    suspend fun seedReply(
+        threadId: Long,
+        authorId: Long,
+        body: String,
+    ) = reply(threadId, authorId, body)
+
+    override suspend fun editPost(
+        postId: Long,
+        userId: Long,
+        body: String,
+    ): PostChange {
+        val (thread, post) = find(postId) ?: return PostChange.NotFound
+        if (post.author != "user$userId") return PostChange.NotYours
+        val edited = post.copy(body = body, editedAt = NOW)
+        replace(thread, edited)
+        return PostChange.Done(edited)
+    }
+
+    override suspend fun deletePost(
+        postId: Long,
+        userId: Long,
+    ): PostChange {
+        val (thread, post) = find(postId) ?: return PostChange.NotFound
+        if (post.author != "user$userId") return PostChange.NotYours
+        if (thread.posts.items
+                .first()
+                .id == postId
+        ) {
+            return PostChange.IsFirstPost
+        }
+        val deleted = post.copy(body = "", deleted = true)
+        replace(thread, deleted)
+        return PostChange.Done(deleted)
+    }
+
+    private fun find(postId: Long) =
+        threads.firstNotNullOfOrNull { t ->
+            t.posts.items.find { it.id == postId && !it.deleted }?.let {
+                t to
+                    it
+            }
+        }
+
+    private fun replace(
+        thread: ThreadDetail,
+        post: Post,
+    ) {
+        val items = thread.posts.items.map { if (it.id == post.id) post else it }
+        threads[threads.indexOf(thread)] = thread.copy(posts = PostPage(items, null))
+    }
+
     private companion object {
         const val NOW = "2026-01-01T00:00:00Z"
     }
@@ -120,6 +175,7 @@ private fun Application.forumModule(
     install(ContentNegotiation) { json() }
     install(StatusPages) {
         exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest) }
+        exception<ApiException> { call, cause -> call.respond(cause.status, cause.message) }
     }
     install(Authentication) { register(TestAuth(TestAuth.Config())) }
     routing { forumRoutes(repository) }
@@ -226,5 +282,55 @@ class ForumRoutesTest {
             assertEquals(HttpStatusCode.TooManyRequests, limited.status)
             assertTrue(limited.headers["Retry-After"] != null)
             assertEquals(HttpStatusCode.OK, client.get("/api/categories").status)
+        }
+
+    private suspend fun ApplicationTestBuilder.startThread() {
+        client.post("/api/categories/general/threads") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"title":"Hi","body":"First"}""")
+        }
+    }
+
+    private suspend fun ApplicationTestBuilder.edit(
+        postId: Long,
+        body: String,
+    ) = client.patch("/api/posts/$postId") {
+        contentType(ContentType.Application.Json)
+        setBody("""{"body":"$body"}""")
+    }
+
+    @Test
+    fun `an author can edit their own post`() =
+        testApplication {
+            forumApp()
+            startThread()
+            val response = edit(1, "  Better  ")
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(""""body":"Better"""" in response.bodyAsText())
+            assertTrue(""""editedAt":""" in response.bodyAsText())
+        }
+
+    @Test
+    fun `nobody can change someone else's post`() =
+        testApplication {
+            val repository = FakeForumRepository()
+            forumApp(repository)
+            startThread()
+            repository.seedReply(1, authorId = 2, body = "Theirs")
+            assertEquals(HttpStatusCode.Forbidden, edit(2, "Mine now").status)
+            assertEquals(HttpStatusCode.Forbidden, client.delete("/api/posts/2").status)
+            assertEquals(HttpStatusCode.NotFound, edit(99, "Nowhere").status)
+        }
+
+    @Test
+    fun `a reply can be deleted but the first post cannot`() =
+        testApplication {
+            val repository = FakeForumRepository()
+            forumApp(repository)
+            startThread()
+            repository.seedReply(1, authorId = 1, body = "Mine")
+            assertEquals(HttpStatusCode.Forbidden, client.delete("/api/posts/1").status)
+            assertEquals(HttpStatusCode.NoContent, client.delete("/api/posts/2").status)
+            assertEquals(HttpStatusCode.NotFound, client.delete("/api/posts/2").status)
         }
 }

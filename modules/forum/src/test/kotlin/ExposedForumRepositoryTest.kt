@@ -6,8 +6,10 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 private const val ALICE = 1L
 private const val BOB = 2L
@@ -113,5 +115,65 @@ class ExposedForumRepositoryTest {
             val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
             val withoutNames = ExposedForumRepository(UserDirectory { emptyMap() })
             assertEquals("deleted", withoutNames.thread(thread.id, FIRST_PAGE)?.author)
+        }
+
+    @Test
+    fun `editing marks the post as edited and only the author may do it`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val postId =
+                thread.posts.items
+                    .single()
+                    .id
+
+            assertEquals(PostChange.NotYours, forum.editPost(postId, BOB, "Hijacked"))
+            assertEquals(PostChange.NotFound, forum.editPost(999, ALICE, "Nowhere"))
+
+            val edited = assertIs<PostChange.Done>(forum.editPost(postId, ALICE, "Better")).post
+            assertEquals("Better", edited.body)
+            assertNotNull(edited.editedAt)
+            assertEquals(
+                "Better",
+                forum
+                    .thread(thread.id, FIRST_PAGE)
+                    ?.posts
+                    ?.items
+                    ?.single()
+                    ?.body,
+            )
+        }
+
+    @Test
+    fun `deleting hides the text and lowers the reply count`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val reply = assertNotNull(forum.reply(thread.id, BOB, "Secret"))
+
+            assertEquals(PostChange.NotYours, forum.deletePost(reply.id, ALICE))
+            val deleted = assertIs<PostChange.Done>(forum.deletePost(reply.id, BOB)).post
+            assertTrue(deleted.deleted)
+            assertEquals("", deleted.body)
+
+            val loaded = assertNotNull(forum.thread(thread.id, FIRST_PAGE))
+            assertEquals(0, loaded.replyCount)
+            assertEquals(listOf("Body", ""), loaded.posts.items.map { it.body })
+            assertEquals(listOf(false, true), loaded.posts.items.map { it.deleted })
+            assertEquals(PostChange.NotFound, forum.deletePost(reply.id, BOB))
+            assertEquals(PostChange.NotFound, forum.editPost(reply.id, BOB, "Undelete"))
+        }
+
+    @Test
+    fun `the first post of a thread cannot be deleted`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            assertEquals(
+                PostChange.IsFirstPost,
+                forum.deletePost(
+                    thread.posts.items
+                        .single()
+                        .id,
+                    ALICE,
+                ),
+            )
         }
 }
