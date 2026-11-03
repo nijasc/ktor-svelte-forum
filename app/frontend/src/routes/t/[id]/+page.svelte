@@ -10,6 +10,7 @@
     import { isStaff } from '#lib/roles.ts';
     import { session } from '#lib/session.svelte.ts';
     import State from '#lib/State.svelte';
+    import VerifyNotice from '#lib/VerifyNotice.svelte';
 
     const id = $derived(page.params.id ?? '');
 
@@ -312,6 +313,8 @@
         <section class="mt-8">
             {#if thread.locked}
                 <p class="alert">{m.threadLocked()}</p>
+            {:else if session.user && !session.user.emailVerified}
+                <VerifyNotice />
             {:else if session.user}
                 <form class="flex flex-col gap-3" onsubmit={submitReply}>
                     <PostEditor id="reply" label={m.replyTitle()} bind:value={reply} maxLength={MAX_BODY_LENGTH} />

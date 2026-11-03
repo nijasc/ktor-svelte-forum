@@ -5,6 +5,66 @@
         "version": "1.0"
     },
     "paths": {
+        "/api/auth/email": {
+            "put": {
+                "summary": "",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeEmail"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurrentUser"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/forgot-password": {
+            "post": {
+                "summary": "",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPassword"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "summary": "",
@@ -90,7 +150,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Credentials"
+                                "$ref": "#/components/schemas/Registration"
                             }
                         }
                     }
@@ -115,6 +175,59 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/auth/reset-password": {
+            "post": {
+                "summary": "",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPassword"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/auth/verification/resend": {
+            "post": {
+                "summary": "",
+                "responses": {
+                    "204": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/verify": {
+            "post": {
+                "summary": "",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VerifyEmail"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": ""
                     }
                 }
             }
@@ -1079,18 +1192,22 @@
     },
     "components": {
         "schemas": {
-            "Credentials": {
+            "Registration": {
                 "type": "object",
-                "title": "Credentials",
+                "title": "Registration",
                 "required": [
                     "username",
-                    "password"
+                    "password",
+                    "email"
                 ],
                 "properties": {
                     "username": {
                         "type": "string"
                     },
                     "password": {
+                        "type": "string"
+                    },
+                    "email": {
                         "type": "string"
                     }
                 }
@@ -1129,6 +1246,87 @@
                             "moderator",
                             "admin"
                         ]
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "emailVerified": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Credentials": {
+                "type": "object",
+                "title": "Credentials",
+                "required": [
+                    "username",
+                    "password"
+                ],
+                "properties": {
+                    "username": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                }
+            },
+            "VerifyEmail": {
+                "type": "object",
+                "title": "VerifyEmail",
+                "required": [
+                    "token"
+                ],
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ForgotPassword": {
+                "type": "object",
+                "title": "ForgotPassword",
+                "required": [
+                    "email"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ResetPassword": {
+                "type": "object",
+                "title": "ResetPassword",
+                "required": [
+                    "token",
+                    "password"
+                ],
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ChangeEmail": {
+                "type": "object",
+                "title": "ChangeEmail",
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
                     }
                 }
             },

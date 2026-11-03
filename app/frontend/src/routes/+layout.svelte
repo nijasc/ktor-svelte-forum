@@ -2,7 +2,7 @@
     import '#lib/ktor-svelte/app.css';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-    import { signOut } from '#lib/auth.ts';
+    import { api } from '#api';
     import { localizeHref as link, m } from '#i18n';
     import { isStaff } from '#lib/roles.ts';
     import { refreshSession, session } from '#lib/session.svelte.ts';
@@ -12,7 +12,7 @@
     onMount(refreshSession);
 
     async function leave() {
-        await signOut();
+        await api.auth.logout();
         await refreshSession();
         await goto(link('/'));
     }

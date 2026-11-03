@@ -1,11 +1,16 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, Credentials, CurrentUser, Greeting, MoveThread, NewCategory, NewPost, NewReport, NewThread, Post, Problem, Profile, ReportPage, ResolveReport, RoleChange, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UpdateCategory } from './types.js';
+import type { ActionReason, Activity, AuditPage, Category, CategoryOrder, ChangeEmail, Credentials, CurrentUser, ForgotPassword, Greeting, MoveThread, NewCategory, NewPost, NewReport, NewThread, Post, Problem, Profile, Registration, ReportPage, ResetPassword, ResolveReport, RoleChange, StaffCategory, StaffUserView, ThreadDetail, ThreadPage, UpdateCategory, VerifyEmail } from './types.js';
 
 export const auth = {
+    putEmail: (body: ChangeEmail, options?: RequestOptions) => request<CurrentUser>('PUT', '/api/auth/email', { ...options, body, operation: 'auth.putEmail' }),
+    forgotPassword: (body: ForgotPassword, options?: RequestOptions) => request<void>('POST', '/api/auth/forgot-password', { ...options, body, operation: 'auth.forgotPassword' }),
     login: (body: Credentials, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/login', { ...options, body, operation: 'auth.login' }),
     logout: (options?: RequestOptions) => request<void>('POST', '/api/auth/logout', { ...options, operation: 'auth.logout' }),
     getMe: (options?: RequestOptions) => request<CurrentUser>('GET', '/api/auth/me', { ...options, operation: 'auth.getMe' }),
-    register: (body: Credentials, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/register', { ...options, body, operation: 'auth.register' }),
+    register: (body: Registration, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/register', { ...options, body, operation: 'auth.register' }),
+    resetPassword: (body: ResetPassword, options?: RequestOptions) => request<void>('POST', '/api/auth/reset-password', { ...options, body, operation: 'auth.resetPassword' }),
+    verificationResend: (options?: RequestOptions) => request<void>('POST', '/api/auth/verification/resend', { ...options, operation: 'auth.verificationResend' }),
+    verify: (body: VerifyEmail, options?: RequestOptions) => request<void>('POST', '/api/auth/verify', { ...options, body, operation: 'auth.verify' }),
 };
 
 export const categories = {
@@ -58,11 +63,13 @@ export const users = {
 };
 
 export interface ApiErrors {
+    'auth.putEmail': Problem;
     'auth.login': Problem;
     'auth.register': Problem;
 }
 
 const errorStatuses: Record<string, number[]> = {
+    'auth.putEmail': [403],
     'auth.login': [401, 403],
     'auth.register': [409],
 };

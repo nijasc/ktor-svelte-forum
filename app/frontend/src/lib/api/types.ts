@@ -42,6 +42,11 @@ export interface CategoryOrder {
     slugs: string[];
 }
 
+export interface ChangeEmail {
+    email: string;
+    password: string;
+}
+
 export interface Credentials {
     username: string;
     password: string;
@@ -51,6 +56,12 @@ export interface CurrentUser {
     id: number;
     username: string;
     role: 'member' | 'moderator' | 'admin';
+    email?: string | null;
+    emailVerified?: boolean;
+}
+
+export interface ForgotPassword {
+    email: string;
 }
 
 export interface Greeting {
@@ -105,6 +116,12 @@ export interface Profile {
     joinedAt: string;
 }
 
+export interface Registration {
+    username: string;
+    password: string;
+    email: string;
+}
+
 export interface ReportPage {
     items: ReportView[];
     next?: string | null;
@@ -125,6 +142,11 @@ export interface ReportedPost {
     author: string;
     body: string;
     hidden: boolean;
+}
+
+export interface ResetPassword {
+    token: string;
+    password: string;
 }
 
 export interface ResolveReport {
@@ -183,4 +205,8 @@ export interface UpdateCategory {
     title?: string | null;
     description?: string | null;
     archived?: boolean | null;
+}
+
+export interface VerifyEmail {
+    token: string;
 }
