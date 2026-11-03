@@ -110,7 +110,7 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 | `PATCH /api/posts/{id}` | Edit your own post. Needs a session |
 | `DELETE /api/posts/{id}` | Delete your own post, except the first post of a thread. Needs a session |
 
-Two categories, `general` and `help`, are created by the first migration. Reading is public and writing needs a session. The frontend does not have forum pages yet. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
+Two categories, `general` and `help`, are created by the first migration. Reading is public and writing needs a session. The frontend has pages for the categories, the threads in a category, starting a thread, and reading, replying to, editing and deleting posts. Posts are written in Markdown and cut down to a short list of safe tags in the browser. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
 
 ## Database
 

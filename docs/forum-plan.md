@@ -69,12 +69,12 @@ Do this before building pages, while there is no data to migrate.
 
 ### Phase 1: a forum you can use
 
-- [ ] Pages: category list, thread list, thread with replies, new thread, reply box (`app`)
-- [ ] Markdown in posts, rendered safely. Decide where it is sanitised (see open decisions)
-- [x] Edit and delete your own posts, with an "edited" mark. The first post of a thread can be edited but not deleted (backend; the UI comes with the pages)
+- [x] Pages: category list, thread list, thread with replies, new thread, reply box (`app`)
+- [x] Markdown in posts, rendered safely. Stored as Markdown and rendered in the browser with `marked` and DOMPurify, which keeps a short list of tags and drops images, scripts, styles and `javascript:` links
+- [x] Edit and delete your own posts, with an "edited" mark. The first post of a thread can be edited but not deleted 
 - [ ] Thread titles and bodies validated the same way on client and server
-- [ ] German and English strings for every page (`app/frontend/messages`)
-- [ ] Empty, loading and error states for each page
+- [x] German and English strings for every page (`app/frontend/messages`)
+- [x] Empty, loading and error states for each page
 
 ### Phase 2: community and moderation
 
