@@ -6,7 +6,7 @@ RUN npm install -g bun
 WORKDIR /app
 COPY . .
 RUN chmod +x gradlew && ./gradlew buildFatJar --no-daemon --console=plain
-RUN cp build/libs/*-all.jar /app.jar
+RUN cp app/build/libs/*-all.jar /app.jar
 
 FROM eclipse-temurin:21-jre
 RUN useradd --system --no-create-home app
