@@ -7,8 +7,10 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.minus
@@ -16,10 +18,12 @@ import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.javatime.CurrentTimestamp
 import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
 
 private const val DELETED_USER = "deleted"
 private const val ACTIVITY_SIZE = 10
@@ -91,7 +95,8 @@ internal class ExposedForumRepository(
     override suspend fun thread(
         id: Long,
         page: PageRequest,
-    ): ThreadDetail? = loadThread(id, page)
+        viewerId: Long?,
+    ): ThreadDetail? = loadThread(id, page, viewerId)
 
     override suspend fun createThread(
         categorySlug: String,
@@ -261,9 +266,10 @@ internal class ExposedForumRepository(
     private suspend fun loadThread(
         id: Long,
         page: PageRequest,
+        viewerId: Long? = null,
     ): ThreadDetail? {
         val after = page.cursor?.let(::decodePostCursor)
-        val (thread, rows) =
+        val found =
             dbQuery {
                 val thread =
                     (Threads innerJoin Categories)
@@ -272,8 +278,11 @@ internal class ExposedForumRepository(
                         .singleOrNull() ?: return@dbQuery null
                 val query = Posts.selectAll().where { Posts.threadId eq id }
                 if (after != null) query.andWhere { Posts.id greater after }
-                thread to query.orderBy(Posts.id).limit(page.limit + 1).toList()
+                val posts = query.orderBy(Posts.id).limit(page.limit + 1).toList()
+                val shownIds = posts.take(page.limit).map { it[Posts.id] }
+                Triple(thread, posts, reactionsOf(shownIds, viewerId))
             } ?: return null
+        val (thread, rows, tallies) = found
         val shown = rows.take(page.limit)
         val names = users.usernames(shown.map { it[Posts.authorId] } + thread[Threads.authorId])
         return ThreadDetail(
@@ -285,20 +294,108 @@ internal class ExposedForumRepository(
             replyCount = thread[Threads.replyCount],
             pinned = thread[Threads.pinned],
             locked = thread[Threads.locked],
-            posts = PostPage(shown.map { it.toPost(names) }, if (rows.size > page.limit) shown.last()[Posts.id].toString() else null),
+            posts =
+                PostPage(
+                    shown.map { it.toPost(names, tallies) },
+                    if (rows.size >
+                        page.limit
+                    ) {
+                        shown.last()[Posts.id].toString()
+                    } else {
+                        null
+                    },
+                ),
         )
     }
 
-    private fun ResultRow.toPost(names: Map<Long, String>) =
-        Post(
+    private fun ResultRow.toPost(
+        names: Map<Long, String>,
+        tallies: Tallies = Tallies(),
+    ): Post {
+        val visible = this[Posts.deletedAt] == null && this[Posts.hiddenAt] == null
+        return Post(
             id = this[Posts.id],
             author = names.nameOf(this[Posts.authorId]),
-            body = if (this[Posts.deletedAt] == null && this[Posts.hiddenAt] == null) this[Posts.body] else "",
+            body = if (visible) this[Posts.body] else "",
             createdAt = this[Posts.createdAt].toString(),
             editedAt = this[Posts.editedAt]?.toString(),
             deleted = this[Posts.deletedAt] != null,
             hidden = this[Posts.hiddenAt] != null,
+            reactions = if (visible) tallies.counts[this[Posts.id]].orEmpty() else emptyMap(),
+            myReaction = if (visible) tallies.mine[this[Posts.id]] else null,
         )
+    }
+
+    /** What people chose for some posts, and what [viewerId] chose. Run inside a transaction. */
+    private fun reactionsOf(
+        postIds: List<Long>,
+        viewerId: Long?,
+    ): Tallies {
+        if (postIds.isEmpty()) return Tallies()
+        val chosen = Reactions.userId.count()
+        val counts =
+            Reactions
+                .select(Reactions.postId, Reactions.kind, chosen)
+                .where { Reactions.postId inList postIds }
+                .groupBy(Reactions.postId, Reactions.kind)
+                .groupBy({ it[Reactions.postId] }, { it[Reactions.kind] to it[chosen].toInt() })
+                .mapValues { it.value.toMap() }
+        val mine =
+            if (viewerId == null) {
+                emptyMap()
+            } else {
+                Reactions
+                    .selectAll()
+                    .where { (Reactions.postId inList postIds) and (Reactions.userId eq viewerId) }
+                    .associate { it[Reactions.postId] to it[Reactions.kind] }
+            }
+        return Tallies(counts, mine)
+    }
+
+    private class Tallies(
+        val counts: Map<Long, Map<String, Int>> = emptyMap(),
+        val mine: Map<Long, String> = emptyMap(),
+    )
+
+    override suspend fun react(
+        postId: Long,
+        userId: Long,
+        kind: Reaction,
+    ): PostReactions? =
+        dbQuery {
+            if (!reactable(postId)) return@dbQuery null
+            Reactions.upsert {
+                it[Reactions.postId] = postId
+                it[Reactions.userId] = userId
+                it[Reactions.kind] = kind.column
+            }
+            summary(postId, userId)
+        }
+
+    override suspend fun unreact(
+        postId: Long,
+        userId: Long,
+    ): PostReactions? =
+        dbQuery {
+            if (!reactable(postId)) return@dbQuery null
+            Reactions.deleteWhere { (Reactions.postId eq postId) and (Reactions.userId eq userId) }
+            summary(postId, userId)
+        }
+
+    /** Reactions go on posts people can see: not deleted, not hidden, and in a thread that is not hidden. */
+    private fun reactable(postId: Long): Boolean =
+        !(Posts innerJoin Threads)
+            .selectAll()
+            .where { (Posts.id eq postId) and Posts.deletedAt.isNull() and Posts.hiddenAt.isNull() and Threads.hiddenAt.isNull() }
+            .empty()
+
+    private fun summary(
+        postId: Long,
+        userId: Long,
+    ): PostReactions {
+        val tallies = reactionsOf(listOf(postId), userId)
+        return PostReactions(tallies.counts[postId].orEmpty(), tallies.mine[postId])
+    }
 
     private fun ResultRow.toSummary(names: Map<Long, String>) =
         ThreadSummary(

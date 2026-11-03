@@ -90,7 +90,7 @@ Do this before building pages, while there is no data to migrate.
 - [x] Email verification and password reset. Email is required to sign up and has to be confirmed to post, which also slows down throwaway accounts
 - [x] Notifications for replies and mentions, with an unread count (`notifications` module). In-process events, replies fold into one unread notification
 - [x] Watch a thread. Starting or replying to a thread watches it, and it can be turned off
-- [ ] Reactions on posts
+- [x] Reactions on posts. A fixed set of four, one per person and post, counted for everyone and shown to the person who chose
 - [ ] Search across threads and posts with Postgres full-text search (`search` module)
 
 ### Phase 4: running it for real

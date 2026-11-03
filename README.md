@@ -126,6 +126,8 @@ Links in emails are one-time and the database keeps only a hash of each token. A
 | `GET /api/threads/{id}` | A thread with a page of its posts. Takes `limit` and `cursor` |
 | `POST /api/categories/{slug}/threads` | Start a thread. Needs a session |
 | `POST /api/threads/{id}/posts` | Reply to a thread. Needs a session |
+| `PUT /api/posts/{id}/reaction` | React with `like`, `love`, `laugh` or `celebrate`. One reaction per person and post, a new one replaces the old. Needs a confirmed address |
+| `DELETE /api/posts/{id}/reaction` | Take your reaction back |
 | `PATCH /api/posts/{id}` | Edit your own post. Needs a session |
 | `DELETE /api/posts/{id}` | Delete your own post, except the first post of a thread. Needs a session |
 

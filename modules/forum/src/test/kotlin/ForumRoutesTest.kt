@@ -63,6 +63,7 @@ private class FakeForumRepository : ForumRepository {
     override suspend fun thread(
         id: Long,
         page: PageRequest,
+        viewerId: Long?,
     ): ThreadDetail? {
         lastPage = page
         return threads.find { it.id == id }
@@ -99,6 +100,17 @@ private class FakeForumRepository : ForumRepository {
     }
 
     override suspend fun activity(userId: Long) = Activity(0, 0, emptyList(), emptyList())
+
+    override suspend fun react(
+        postId: Long,
+        userId: Long,
+        kind: Reaction,
+    ): PostReactions? = if (find(postId) == null) null else PostReactions(mapOf(kind.column to 1), kind.column)
+
+    override suspend fun unreact(
+        postId: Long,
+        userId: Long,
+    ): PostReactions? = if (find(postId) == null) null else PostReactions(emptyMap(), null)
 
     /** Adds a reply by a given user without going through the routes, so tests can set up other people's posts. */
     suspend fun seedReply(

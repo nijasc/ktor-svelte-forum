@@ -212,4 +212,91 @@ class ExposedForumRepositoryTest {
             forum.reply(999, BOB, "Nowhere")
             assertTrue(events.isEmpty())
         }
+
+    @Test
+    fun `a person has one reaction per post and can change or remove it`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val postId =
+                thread.posts.items
+                    .single()
+                    .id
+
+            assertEquals(PostReactions(mapOf("like" to 1), "like"), forum.react(postId, ALICE, Reaction.LIKE))
+            assertEquals(PostReactions(mapOf("like" to 1, "love" to 1), "love"), forum.react(postId, BOB, Reaction.LOVE))
+            assertEquals(PostReactions(mapOf("love" to 2), "love"), forum.react(postId, ALICE, Reaction.LOVE))
+            assertEquals(PostReactions(mapOf("love" to 1), null), forum.unreact(postId, ALICE))
+            assertEquals(PostReactions(mapOf("love" to 1), null), forum.unreact(postId, ALICE))
+        }
+
+    @Test
+    fun `readers see the counts and visitors see no choice of their own`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val postId =
+                thread.posts.items
+                    .single()
+                    .id
+            forum.react(postId, ALICE, Reaction.LAUGH)
+            forum.react(postId, BOB, Reaction.LAUGH)
+
+            val asAlice = assertNotNull(forum.thread(thread.id, FIRST_PAGE, viewerId = ALICE)).posts.items.single()
+            assertEquals(mapOf("laugh" to 2), asAlice.reactions)
+            assertEquals("laugh", asAlice.myReaction)
+
+            val asVisitor = assertNotNull(forum.thread(thread.id, FIRST_PAGE)).posts.items.single()
+            assertEquals(mapOf("laugh" to 2), asVisitor.reactions)
+            assertNull(asVisitor.myReaction)
+
+            forum.unreact(postId, BOB)
+            val asBob = assertNotNull(forum.thread(thread.id, FIRST_PAGE, viewerId = BOB)).posts.items.single()
+            assertNull(asBob.myReaction)
+            assertEquals(mapOf("laugh" to 1), asBob.reactions)
+        }
+
+    @Test
+    fun `reactions are counted per post`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val reply = assertIs<ReplyResult.Done>(forum.reply(thread.id, BOB, "Reply")).post
+            forum.react(
+                thread.posts.items
+                    .single()
+                    .id,
+                BOB,
+                Reaction.LIKE,
+            )
+            forum.react(reply.id, ALICE, Reaction.CELEBRATE)
+
+            val posts = assertNotNull(forum.thread(thread.id, FIRST_PAGE)).posts.items
+            assertEquals(listOf(mapOf("like" to 1), mapOf("celebrate" to 1)), posts.map { it.reactions })
+        }
+
+    @Test
+    fun `hidden, deleted and missing posts take no reactions and show none`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
+            val reply = assertIs<ReplyResult.Done>(forum.reply(thread.id, BOB, "Reply")).post
+            forum.react(reply.id, ALICE, Reaction.LIKE)
+
+            ExposedForumStaff(directory).setPostHidden(reply.id, true)
+            assertNull(forum.react(reply.id, ALICE, Reaction.LOVE))
+            assertNull(forum.unreact(reply.id, ALICE))
+            val hidden = assertNotNull(forum.thread(thread.id, FIRST_PAGE, ALICE)).posts.items.last()
+            assertEquals(emptyMap(), hidden.reactions)
+            assertNull(hidden.myReaction)
+
+            ExposedForumStaff(directory).setPostHidden(reply.id, false)
+            assertEquals(
+                mapOf("like" to 1),
+                assertNotNull(forum.thread(thread.id, FIRST_PAGE))
+                    .posts.items
+                    .last()
+                    .reactions,
+            )
+
+            forum.deletePost(reply.id, BOB)
+            assertNull(forum.react(reply.id, ALICE, Reaction.LOVE))
+            assertNull(forum.react(999, ALICE, Reaction.LIKE))
+        }
 }

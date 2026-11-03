@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.javatime.CurrentTimestamp
 import org.jetbrains.exposed.v1.javatime.timestamp
 
+private const val MAX_REACTION_COLUMN = 16
 private const val MAX_SLUG_COLUMN = 64
 private const val MAX_TITLE_COLUMN = 200
 
@@ -44,4 +45,12 @@ internal object Posts : Table("posts") {
     val hiddenAt = timestamp("hidden_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
+}
+
+internal object Reactions : Table("reactions") {
+    val postId = long("post_id")
+    val userId = long("user_id")
+    val kind = varchar("kind", MAX_REACTION_COLUMN)
+
+    override val primaryKey = PrimaryKey(postId, userId)
 }

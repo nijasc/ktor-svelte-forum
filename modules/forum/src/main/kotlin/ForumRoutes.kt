@@ -22,6 +22,7 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 
@@ -51,8 +52,12 @@ internal fun Route.forumRoutes(
             val userId = users.idOf(call.parameters["username"] ?: throw NotFoundException()) ?: throw NotFoundException()
             call.respond(forum.activity(userId))
         }
-        get("/threads/{id}") {
-            call.respond(forum.thread(call.threadId(), call.pageRequest()) ?: throw NotFoundException())
+        // Readers who are signed in also see which reaction they chose. Visitors read the same thread without one.
+        authenticate(SESSION_AUTH, optional = true) {
+            get("/threads/{id}") {
+                val viewer = call.principal<AuthUser>()?.id
+                call.respond(forum.thread(call.threadId(), call.pageRequest(), viewer) ?: throw NotFoundException())
+            }
         }
         authenticate(SESSION_AUTH) {
             rateLimit(RateLimits.WRITE) {
@@ -70,6 +75,13 @@ internal fun Route.forumRoutes(
                         ReplyResult.NotFound -> throw NotFoundException()
                         ReplyResult.Locked -> throw ApiException(HttpStatusCode.Locked, "This thread is locked.")
                     }
+                }
+                put("/posts/{id}/reaction") {
+                    val kind = call.receive<NewReaction>().kind
+                    call.respond(forum.react(call.postId(), call.requireVerified().id, kind) ?: throw NotFoundException())
+                }
+                delete("/posts/{id}/reaction") {
+                    call.respond(forum.unreact(call.postId(), call.requireVerified().id) ?: throw NotFoundException())
                 }
                 patch("/posts/{id}") {
                     val new = call.receive<NewPost>()

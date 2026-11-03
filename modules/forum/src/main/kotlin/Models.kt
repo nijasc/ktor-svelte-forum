@@ -2,6 +2,7 @@ package dev.nilsschlegel.forum.forum
 
 import io.github.nijasc.ktor.svelte.Validated
 import io.github.nijasc.ktor.svelte.Validator
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 internal const val MAX_TITLE_LENGTH = 200
@@ -56,6 +57,10 @@ data class Post(
     val deleted: Boolean = false,
     /** Hidden by a moderator. */
     val hidden: Boolean = false,
+    /** How many people chose each reaction. Reactions nobody chose are left out. */
+    val reactions: Map<String, Int> = emptyMap(),
+    /** The reaction the reader chose, or null for visitors and readers who chose none. */
+    val myReaction: String? = null,
 )
 
 @Serializable
@@ -117,3 +122,34 @@ data class ActivityPost(
 )
 
 internal const val EXCERPT_LENGTH = 200
+
+/** The reactions people can leave on a post. A person has at most one per post. */
+@Serializable
+enum class Reaction {
+    @SerialName("like")
+    LIKE,
+
+    @SerialName("love")
+    LOVE,
+
+    @SerialName("laugh")
+    LAUGH,
+
+    @SerialName("celebrate")
+    CELEBRATE,
+    ;
+
+    internal val column get() = name.lowercase()
+}
+
+@Serializable
+data class NewReaction(
+    val kind: Reaction,
+)
+
+/** A post's reactions after a change. */
+@Serializable
+data class PostReactions(
+    val reactions: Map<String, Int>,
+    val myReaction: String?,
+)

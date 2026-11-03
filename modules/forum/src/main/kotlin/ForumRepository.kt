@@ -21,10 +21,11 @@ internal interface ForumRepository {
         page: PageRequest,
     ): ThreadPage?
 
-    /** The thread with one page of its posts, or null if there is no such thread. */
+    /** The thread with one page of its posts, or null if there is no such thread. [viewerId] fills in `myReaction`. */
     suspend fun thread(
         id: Long,
         page: PageRequest,
+        viewerId: Long? = null,
     ): ThreadDetail?
 
     /** Creates the thread with [body] as its first post, or returns null if there is no such category. */
@@ -41,6 +42,19 @@ internal interface ForumRepository {
         authorId: Long,
         body: String,
     ): ReplyResult
+
+    /** Sets the user's reaction to a post, replacing the one they had. Null if the post is missing, hidden or deleted. */
+    suspend fun react(
+        postId: Long,
+        userId: Long,
+        kind: Reaction,
+    ): PostReactions?
+
+    /** Takes the user's reaction away. Null if the post is missing, hidden or deleted. */
+    suspend fun unreact(
+        postId: Long,
+        userId: Long,
+    ): PostReactions?
 
     /** The user's recent threads and posts that are visible to everyone. */
     suspend fun activity(userId: Long): Activity
