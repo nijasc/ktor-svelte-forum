@@ -1,0 +1,14 @@
+.gradle/
+.kotlin/
+build/
+out/
+.idea/
+*.iml
+.vscode/
+node_modules/
+.svelte-kit/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

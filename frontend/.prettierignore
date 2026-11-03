@@ -1,0 +1,14 @@
+build/
+.svelte-kit/
+node_modules/
+messages/
+src/lib/api/
+src/lib/ktor-svelte/
+vite.config.ts
+src/hooks.ts
+src/hooks.server.ts
+package.json
+bun.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
