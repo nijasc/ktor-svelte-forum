@@ -17,7 +17,9 @@ import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.AuthenticationContext
 import io.ktor.server.auth.AuthenticationFailedCause
 import io.ktor.server.auth.AuthenticationProvider
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -29,12 +31,30 @@ import kotlin.test.assertTrue
 private class FakeForumRepository : ForumRepository {
     private val threads = mutableListOf<ThreadDetail>()
 
+    /** The last page request a route passed on, so tests can check cursor and limit handling. */
+    var lastPage: PageRequest? = null
+
     override suspend fun categories() = listOf(Category("general", "General", "Talk about anything."))
 
-    override suspend fun threads(categorySlug: String) =
-        if (categorySlug == "general") threads.map { ThreadSummary(it.id, it.title, it.author, it.createdAt) } else null
+    override suspend fun threads(
+        categorySlug: String,
+        page: PageRequest,
+    ): ThreadPage? {
+        lastPage = page
+        if (categorySlug != "general") return null
+        val newestFirst = threads.reversed().filter { page.cursor == null || it.id < page.cursor.toLong() }
+        val shown = newestFirst.take(page.limit)
+        val items = shown.map { ThreadSummary(it.id, it.title, it.author, it.createdAt, it.replyCount, NOW) }
+        return ThreadPage(items, if (newestFirst.size > page.limit) shown.last().id.toString() else null)
+    }
 
-    override suspend fun thread(id: Long) = threads.find { it.id == id }
+    override suspend fun thread(
+        id: Long,
+        page: PageRequest,
+    ): ThreadDetail? {
+        lastPage = page
+        return threads.find { it.id == id }
+    }
 
     override suspend fun createThread(
         categorySlug: String,
@@ -44,14 +64,8 @@ private class FakeForumRepository : ForumRepository {
     ): ThreadDetail? {
         if (categorySlug != "general") return null
         val id = threads.size + 1L
-        return ThreadDetail(
-            id,
-            categorySlug,
-            title,
-            "user$authorId",
-            NOW,
-            listOf(Post(1, "user$authorId", body, NOW)),
-        ).also { threads += it }
+        val posts = PostPage(listOf(Post(1, "user$authorId", body, NOW)), null)
+        return ThreadDetail(id, categorySlug, title, "user$authorId", NOW, 0, posts).also { threads += it }
     }
 
     override suspend fun reply(
@@ -59,9 +73,10 @@ private class FakeForumRepository : ForumRepository {
         authorId: Long,
         body: String,
     ): Post? {
-        val thread = thread(threadId) ?: return null
-        val post = Post(thread.posts.size + 1L, "user$authorId", body, NOW)
-        threads[threads.indexOf(thread)] = thread.copy(posts = thread.posts + post)
+        val thread = threads.find { it.id == threadId } ?: return null
+        val post = Post(thread.posts.items.size + 1L, "user$authorId", body, NOW)
+        threads[threads.indexOf(thread)] =
+            thread.copy(replyCount = thread.replyCount + 1, posts = PostPage(thread.posts.items + post, null))
         return post
     }
 
@@ -88,14 +103,17 @@ private class TestAuth(
     }
 }
 
-private fun ApplicationTestBuilder.forumApp() {
-    application { forumModule() }
+private fun ApplicationTestBuilder.forumApp(repository: FakeForumRepository = FakeForumRepository()) {
+    application { forumModule(repository) }
 }
 
-private fun Application.forumModule() {
+private fun Application.forumModule(repository: ForumRepository) {
     install(ContentNegotiation) { json() }
+    install(StatusPages) {
+        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest) }
+    }
     install(Authentication) { register(TestAuth(TestAuth.Config())) }
-    routing { forumRoutes(FakeForumRepository()) }
+    routing { forumRoutes(repository) }
 }
 
 class ForumRoutesTest {
@@ -147,5 +165,36 @@ class ForumRoutesTest {
                     setBody("""{"title":"Hi","body":"Hi"}""")
                 }
             assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `thread lists are paged with a cursor`() =
+        testApplication {
+            forumApp()
+            repeat(3) {
+                client.post("/api/categories/general/threads") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"title":"Thread $it","body":"Body"}""")
+                }
+            }
+            val first = client.get("/api/categories/general/threads?limit=2").bodyAsText()
+            assertTrue("Thread 2" in first && "Thread 1" in first && "Thread 0" !in first)
+            assertTrue(""""next":"2"""" in first)
+            val second = client.get("/api/categories/general/threads?limit=2&cursor=2").bodyAsText()
+            assertTrue("Thread 0" in second && """"next":null""" in second)
+        }
+
+    @Test
+    fun `limit defaults and is clamped`() =
+        testApplication {
+            val repository = FakeForumRepository()
+            forumApp(repository)
+            client.get("/api/categories/general/threads")
+            assertEquals(PageRequest.DEFAULT_LIMIT, repository.lastPage?.limit)
+            client.get("/api/categories/general/threads?limit=100000")
+            assertEquals(PageRequest.MAX_LIMIT, repository.lastPage?.limit)
+            client.get("/api/categories/general/threads?limit=0")
+            assertEquals(1, repository.lastPage?.limit)
+            assertEquals(HttpStatusCode.BadRequest, client.get("/api/categories/general/threads?limit=lots").status)
         }
 }

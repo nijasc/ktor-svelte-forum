@@ -20,6 +20,22 @@ data class ThreadSummary(
     val title: String,
     val author: String,
     val createdAt: String,
+    val replyCount: Int,
+    val lastPostAt: String,
+)
+
+/** One page of threads, most recently active first. Pass [next] as `cursor` to get the following page. */
+@Serializable
+data class ThreadPage(
+    val items: List<ThreadSummary>,
+    val next: String?,
+)
+
+/** One page of posts, oldest first. Pass [next] as `cursor` to get the following page. */
+@Serializable
+data class PostPage(
+    val items: List<Post>,
+    val next: String?,
 )
 
 @Serializable
@@ -37,7 +53,8 @@ data class ThreadDetail(
     val title: String,
     val author: String,
     val createdAt: String,
-    val posts: List<Post>,
+    val replyCount: Int,
+    val posts: PostPage,
 )
 
 @Serializable

@@ -101,8 +101,8 @@ The ktor plugin in `forum.feature` matters. The TypeScript client is generated f
 | Route | Purpose |
 |---|---|
 | `GET /api/categories` | List categories |
-| `GET /api/categories/{slug}/threads` | List the threads in a category, newest first |
-| `GET /api/threads/{id}` | A thread with its posts |
+| `GET /api/categories/{slug}/threads` | List the threads in a category, most recently active first. Takes `limit` and `cursor` |
+| `GET /api/threads/{id}` | A thread with a page of its posts. Takes `limit` and `cursor` |
 | `POST /api/categories/{slug}/threads` | Start a thread. Needs a session |
 | `POST /api/threads/{id}/posts` | Reply to a thread. Needs a session |
 

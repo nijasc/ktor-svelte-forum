@@ -35,6 +35,11 @@ export interface Post {
     createdAt: string;
 }
 
+export interface PostPage {
+    items: Post[];
+    next?: string | null;
+}
+
 export interface Problem {
     message: string;
 }
@@ -45,7 +50,13 @@ export interface ThreadDetail {
     title: string;
     author: string;
     createdAt: string;
-    posts: Post[];
+    replyCount: number;
+    posts: PostPage;
+}
+
+export interface ThreadPage {
+    items: ThreadSummary[];
+    next?: string | null;
 }
 
 export interface ThreadSummary {
@@ -53,4 +64,6 @@ export interface ThreadSummary {
     title: string;
     author: string;
     createdAt: string;
+    replyCount: number;
+    lastPostAt: string;
 }

@@ -5,11 +5,18 @@ import dev.nilsschlegel.forum.database.dbQuery
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.javatime.CurrentTimestamp
 import org.jetbrains.exposed.v1.javatime.timestamp
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 private const val MAX_SLUG_COLUMN = 64
 private const val MAX_TITLE_COLUMN = 200
@@ -31,6 +38,8 @@ internal object Threads : Table("threads") {
     val title = varchar("title", MAX_TITLE_COLUMN)
     val authorId = long("author_id")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+    val replyCount = integer("reply_count").default(0)
+    val lastPostAt = timestamp("last_post_at").defaultExpression(CurrentTimestamp)
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -56,28 +65,48 @@ internal class ExposedForumRepository(
                 .map { Category(it[Categories.slug], it[Categories.title], it[Categories.description]) }
         }
 
-    override suspend fun threads(categorySlug: String): List<ThreadSummary>? {
+    override suspend fun threads(
+        categorySlug: String,
+        page: PageRequest,
+    ): ThreadPage? {
+        val cursor = page.cursor?.let(ThreadCursor::decode)
         val rows =
             dbQuery {
                 val categoryId = categoryId(categorySlug) ?: return@dbQuery null
-                Threads
-                    .selectAll()
-                    .where { Threads.categoryId eq categoryId }
-                    .orderBy(Threads.createdAt, SortOrder.DESC)
+                val query = Threads.selectAll().where { Threads.categoryId eq categoryId }
+                if (cursor != null) {
+                    query.andWhere {
+                        (Threads.lastPostAt less cursor.lastPostAt) or
+                            ((Threads.lastPostAt eq cursor.lastPostAt) and (Threads.id less cursor.id))
+                    }
+                }
+                query
+                    .orderBy(Threads.lastPostAt, SortOrder.DESC)
+                    .orderBy(Threads.id, SortOrder.DESC)
+                    .limit(page.limit + 1)
                     .toList()
             } ?: return null
-        val names = users.usernames(rows.map { it[Threads.authorId] })
-        return rows.map {
-            ThreadSummary(
-                it[Threads.id],
-                it[Threads.title],
-                names.nameOf(it[Threads.authorId]),
-                it[Threads.createdAt].toString(),
-            )
-        }
+        val shown = rows.take(page.limit)
+        val names = users.usernames(shown.map { it[Threads.authorId] })
+        val items =
+            shown.map {
+                ThreadSummary(
+                    id = it[Threads.id],
+                    title = it[Threads.title],
+                    author = names.nameOf(it[Threads.authorId]),
+                    createdAt = it[Threads.createdAt].toString(),
+                    replyCount = it[Threads.replyCount],
+                    lastPostAt = it[Threads.lastPostAt].toString(),
+                )
+            }
+        val next = if (rows.size > page.limit) ThreadCursor(shown.last()[Threads.lastPostAt], shown.last()[Threads.id]).encode() else null
+        return ThreadPage(items, next)
     }
 
-    override suspend fun thread(id: Long): ThreadDetail? = loadThread(id)
+    override suspend fun thread(
+        id: Long,
+        page: PageRequest,
+    ): ThreadDetail? = loadThread(id, page)
 
     override suspend fun createThread(
         categorySlug: String,
@@ -97,7 +126,7 @@ internal class ExposedForumRepository(
                 insertPost(id, authorId, body)
                 id
             } ?: return null
-        return loadThread(threadId)
+        return loadThread(threadId, PageRequest(null, PageRequest.DEFAULT_LIMIT))
     }
 
     override suspend fun reply(
@@ -109,6 +138,10 @@ internal class ExposedForumRepository(
             dbQuery {
                 if (Threads.selectAll().where { Threads.id eq threadId }.empty()) return@dbQuery null
                 val postId = insertPost(threadId, authorId, body)
+                Threads.update({ Threads.id eq threadId }) {
+                    it.update(replyCount, replyCount + 1)
+                    it[lastPostAt] = CurrentTimestamp
+                }
                 Posts.selectAll().where { Posts.id eq postId }.single()
             } ?: return null
         return row.toPost(users.usernames(listOf(authorId)))
@@ -132,30 +165,32 @@ internal class ExposedForumRepository(
             it[Posts.body] = body
         }[Posts.id]
 
-    private suspend fun loadThread(id: Long): ThreadDetail? {
-        val (thread, posts) =
+    private suspend fun loadThread(
+        id: Long,
+        page: PageRequest,
+    ): ThreadDetail? {
+        val after = page.cursor?.let(::decodePostCursor)
+        val (thread, rows) =
             dbQuery {
                 val thread =
                     (Threads innerJoin Categories)
                         .selectAll()
                         .where { Threads.id eq id }
                         .singleOrNull() ?: return@dbQuery null
-                thread to
-                    Posts
-                        .selectAll()
-                        .where { Posts.threadId eq id }
-                        .orderBy(Posts.createdAt)
-                        .orderBy(Posts.id)
-                        .toList()
+                val query = Posts.selectAll().where { Posts.threadId eq id }
+                if (after != null) query.andWhere { Posts.id greater after }
+                thread to query.orderBy(Posts.id).limit(page.limit + 1).toList()
             } ?: return null
-        val names = users.usernames(posts.map { it[Posts.authorId] } + thread[Threads.authorId])
+        val shown = rows.take(page.limit)
+        val names = users.usernames(shown.map { it[Posts.authorId] } + thread[Threads.authorId])
         return ThreadDetail(
             id = thread[Threads.id],
             category = thread[Categories.slug],
             title = thread[Threads.title],
             author = names.nameOf(thread[Threads.authorId]),
             createdAt = thread[Threads.createdAt].toString(),
-            posts = posts.map { it.toPost(names) },
+            replyCount = thread[Threads.replyCount],
+            posts = PostPage(shown.map { it.toPost(names) }, if (rows.size > page.limit) shown.last()[Posts.id].toString() else null),
         )
     }
 

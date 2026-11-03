@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, ThreadDetail, ThreadSummary } from './types.js';
+import type { Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, ThreadDetail, ThreadPage } from './types.js';
 
 export const auth = {
     login: (body: Credentials, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/login', { ...options, body, operation: 'auth.login' }),
@@ -10,7 +10,7 @@ export const auth = {
 
 export const categories = {
     list: (options?: RequestOptions) => request<Category[]>('GET', '/api/categories', { ...options, operation: 'categories.list' }),
-    getThreads: (slug: string | number, options?: RequestOptions) => request<ThreadSummary[]>('GET', `/api/categories/${encodeURIComponent(slug)}/threads`, { ...options, operation: 'categories.getThreads' }),
+    getThreads: (slug: string | number, query?: { limit?: string; cursor?: string }, options?: RequestOptions) => request<ThreadPage>('GET', `/api/categories/${encodeURIComponent(slug)}/threads`, { ...options, query, operation: 'categories.getThreads' }),
     threads: (slug: string | number, body: NewThread, options?: RequestOptions) => request<ThreadDetail>('POST', `/api/categories/${encodeURIComponent(slug)}/threads`, { ...options, body, operation: 'categories.threads' }),
 };
 
@@ -19,7 +19,7 @@ export const hello = {
 };
 
 export const threads = {
-    get: (id: string | number, options?: RequestOptions) => request<ThreadDetail>('GET', `/api/threads/${encodeURIComponent(id)}`, { ...options, operation: 'threads.get' }),
+    get: (id: string | number, query?: { limit?: string; cursor?: string }, options?: RequestOptions) => request<ThreadDetail>('GET', `/api/threads/${encodeURIComponent(id)}`, { ...options, query, operation: 'threads.get' }),
     posts: (id: string | number, body: NewPost, options?: RequestOptions) => request<Post>('POST', `/api/threads/${encodeURIComponent(id)}/posts`, { ...options, body, operation: 'threads.posts' }),
 };
 

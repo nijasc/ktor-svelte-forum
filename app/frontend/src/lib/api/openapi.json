@@ -189,6 +189,20 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -197,10 +211,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/ThreadSummary"
-                                    }
+                                    "$ref": "#/components/schemas/ThreadPage"
                                 }
                             }
                         }
@@ -233,6 +244,20 @@
                         "name": "id",
                         "in": "path",
                         "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
                         "schema": {
                             "type": "string"
                         }
@@ -376,7 +401,9 @@
                     "id",
                     "title",
                     "author",
-                    "createdAt"
+                    "createdAt",
+                    "replyCount",
+                    "lastPostAt"
                 ],
                 "properties": {
                     "id": {
@@ -390,6 +417,33 @@
                     },
                     "createdAt": {
                         "type": "string"
+                    },
+                    "replyCount": {
+                        "type": "integer"
+                    },
+                    "lastPostAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ThreadPage": {
+                "type": "object",
+                "title": "ThreadPage",
+                "required": [
+                    "items"
+                ],
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ThreadSummary"
+                        }
+                    },
+                    "next": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 }
             },
@@ -417,6 +471,27 @@
                     }
                 }
             },
+            "PostPage": {
+                "type": "object",
+                "title": "PostPage",
+                "required": [
+                    "items"
+                ],
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Post"
+                        }
+                    },
+                    "next": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                }
+            },
             "ThreadDetail": {
                 "type": "object",
                 "title": "ThreadDetail",
@@ -426,6 +501,7 @@
                     "title",
                     "author",
                     "createdAt",
+                    "replyCount",
                     "posts"
                 ],
                 "properties": {
@@ -444,11 +520,11 @@
                     "createdAt": {
                         "type": "string"
                     },
+                    "replyCount": {
+                        "type": "integer"
+                    },
                     "posts": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Post"
-                        }
+                        "$ref": "#/components/schemas/PostPage"
                     }
                 }
             },

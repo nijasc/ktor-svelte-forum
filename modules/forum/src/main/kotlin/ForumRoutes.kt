@@ -8,6 +8,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -30,11 +31,10 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
             call.respond(forum.categories())
         }
         get("/categories/{slug}/threads") {
-            val threads = forum.threads(call.slug()) ?: throw NotFoundException()
-            call.respond(threads)
+            call.respond(forum.threads(call.slug(), call.pageRequest()) ?: throw NotFoundException())
         }
         get("/threads/{id}") {
-            call.respond(forum.thread(call.threadId()) ?: throw NotFoundException())
+            call.respond(forum.thread(call.threadId(), call.pageRequest()) ?: throw NotFoundException())
         }
         authenticate(SESSION_AUTH) {
             post("/categories/{slug}/threads") {
@@ -50,6 +50,14 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
             }
         }
     }
+}
+
+private fun ApplicationCall.pageRequest(): PageRequest {
+    val limit = request.queryParameters["limit"]?.let { it.toIntOrNull() ?: throw BadRequestException("Not a valid limit.") }
+    return PageRequest(
+        cursor = request.queryParameters["cursor"],
+        limit = (limit ?: PageRequest.DEFAULT_LIMIT).coerceIn(1, PageRequest.MAX_LIMIT),
+    )
 }
 
 private fun ApplicationCall.slug(): String = parameters["slug"] ?: throw NotFoundException()
