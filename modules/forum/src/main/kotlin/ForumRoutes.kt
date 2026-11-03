@@ -5,6 +5,7 @@ import dev.nilsschlegel.forum.accounts.SESSION_AUTH
 import dev.nilsschlegel.forum.accounts.UserDirectory
 import dev.nilsschlegel.forum.accounts.requireVerified
 import dev.nilsschlegel.forum.core.ApiException
+import dev.nilsschlegel.forum.core.EventBus
 import dev.nilsschlegel.forum.core.RateLimits
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -25,9 +26,12 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 
 /** Serves the forum under `/api`: categories, threads and posts. Needs [dev.nilsschlegel.forum.accounts.accounts] installed first. */
-fun Application.forum(users: UserDirectory): ForumStaff {
+fun Application.forum(
+    users: UserDirectory,
+    events: EventBus = EventBus(),
+): ForumStaff {
     routing {
-        forumRoutes(ExposedForumRepository(users), users)
+        forumRoutes(ExposedForumRepository(users, events), users)
     }
     return ExposedForumStaff(users)
 }

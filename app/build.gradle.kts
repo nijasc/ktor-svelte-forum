@@ -52,6 +52,7 @@ dependencies {
     implementation(projects.forum)
     implementation(projects.moderation)
     implementation(projects.mail)
+    implementation(projects.notifications)
     implementation(libs.ktor.server.netty)
     implementation(libs.logback)
 }

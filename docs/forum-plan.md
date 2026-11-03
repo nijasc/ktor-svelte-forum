@@ -88,8 +88,8 @@ Do this before building pages, while there is no data to migrate.
 ### Phase 3: keeping people coming back
 
 - [x] Email verification and password reset. Email is required to sign up and has to be confirmed to post, which also slows down throwaway accounts
-- [ ] Notifications for replies and mentions, with an unread count (`notifications` module)
-- [ ] Watch a thread
+- [x] Notifications for replies and mentions, with an unread count (`notifications` module). In-process events, replies fold into one unread notification
+- [x] Watch a thread. Starting or replying to a thread watches it, and it can be turned off
 - [ ] Reactions on posts
 - [ ] Search across threads and posts with Postgres full-text search (`search` module)
 

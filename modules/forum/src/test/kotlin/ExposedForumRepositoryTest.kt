@@ -1,6 +1,7 @@
 package dev.nilsschlegel.forum.forum
 
 import dev.nilsschlegel.forum.accounts.UserDirectory
+import dev.nilsschlegel.forum.core.EventBus
 import dev.nilsschlegel.forum.database.TestDatabase
 import kotlinx.coroutines.runBlocking
 import kotlin.test.BeforeTest
@@ -24,7 +25,9 @@ class ExposedForumRepositoryTest {
 
             override suspend fun idOf(username: String) = names.entries.firstOrNull { it.value == username }?.key
         }
-    private val forum = ExposedForumRepository(directory)
+    private val events = mutableListOf<Any>()
+    private val bus = EventBus().also { it.on<Any> { event -> events += event } }
+    private val forum = ExposedForumRepository(directory, bus)
 
     @BeforeTest
     fun reset() {
@@ -186,5 +189,27 @@ class ExposedForumRepositoryTest {
                     ALICE,
                 ),
             )
+        }
+
+    @Test
+    fun `starting a thread and replying publish events`() =
+        runBlocking {
+            val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Hi @bob"))
+            val reply = assertIs<ReplyResult.Done>(forum.reply(thread.id, BOB, "Thanks")).post
+
+            assertEquals(
+                listOf<Any>(
+                    ThreadCreated(thread.id, "Hello", ALICE, "Hi @bob"),
+                    PostCreated(thread.id, "Hello", reply.id, BOB, ALICE, "Thanks"),
+                ),
+                events,
+            )
+        }
+
+    @Test
+    fun `a failed reply publishes nothing`() =
+        runBlocking {
+            forum.reply(999, BOB, "Nowhere")
+            assertTrue(events.isEmpty())
         }
 }

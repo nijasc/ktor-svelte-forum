@@ -75,10 +75,11 @@ modules/
   forum/        Categories, threads and posts
   moderation/   Reports, bans, the audit log and the staff routes
   mail/         Sending email, to the log or through Resend
+  notifications/ Watching threads, mentions and the notification list
 build-logic/    Convention plugins
 ```
 
-Dependencies point one way: `app` depends on every module, `moderation` depends on `forum` and `accounts`, `forum` depends on `accounts`, and `accounts`, `forum` and `moderation` depend on `database`, which depends on `core`. Features do not reach into each other's tables. `app` is the only place that knows every module, in `Application.module()`.
+Dependencies point one way: `app` depends on every module, `moderation` and `notifications` depend on `forum` and `accounts`, `forum` depends on `accounts`, and `accounts`, `forum` and `moderation` depend on `database`, which depends on `core`. Features do not reach into each other's tables. `app` is the only place that knows every module, in `Application.module()`.
 
 Each feature exposes one function that installs it (`accounts()`, `forum()`) and keeps everything else `internal`. Routes talk to an interface such as `ForumRepository`, and the Exposed class behind it is the only code that touches tables. That is why `ForumRoutesTest` runs without a database.
 
@@ -129,6 +130,19 @@ Links in emails are one-time and the database keeps only a hash of each token. A
 | `DELETE /api/posts/{id}` | Delete your own post, except the first post of a thread. Needs a session |
 
 Two categories, `general` and `help`, are created by the first migration. A user's recent activity is at `GET /api/users/{username}/activity`, and their profile at `GET /api/users/{username}`. Reading is public and writing needs a session. The frontend has pages for the categories, the threads in a category, starting a thread, and reading, replying to, editing and deleting posts. Posts are written in Markdown and cut down to a short list of safe tags in the browser. The roadmap, with the phases and open decisions, is in [docs/forum-plan.md](docs/forum-plan.md).
+
+## Notifications
+
+The forum publishes `ThreadCreated` and `PostCreated` on the in-process event bus, and the `notifications` module reacts to them. The forum does not know it exists. Whoever starts a thread or replies to it watches it. Watchers get a `reply` notification when someone else replies, and anyone written as `@name` in a post gets a `mention` instead. Replies that arrive while one is still unread fold into it with a count, so a busy thread leaves one line instead of a list. Mentions work for names made of letters, digits, `_` and `-`, and one post mentions at most ten people.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/notifications` | Your notifications, newest first, with the unread count. Takes `limit` and `cursor` |
+| `GET /api/notifications/unread` | Just the unread count, for the bell in the header |
+| `POST /api/notifications/read`, `/api/notifications/{id}/read` | Mark all, or one, as read |
+| `GET`, `PUT`, `DELETE /api/threads/{id}/watch` | See, start or stop watching a thread |
+
+Events are handled one after another inside the request that caused them, and a handler that fails is logged and never fails the request. Nothing is stored, so an event in flight when the server stops is lost. Move to a queue if that ever matters.
 
 ## Moderation
 

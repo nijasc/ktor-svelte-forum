@@ -1,6 +1,7 @@
 package dev.nilsschlegel.forum.forum
 
 import dev.nilsschlegel.forum.accounts.UserDirectory
+import dev.nilsschlegel.forum.core.EventBus
 import dev.nilsschlegel.forum.database.dbQuery
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -25,6 +26,7 @@ private const val ACTIVITY_SIZE = 10
 
 internal class ExposedForumRepository(
     private val users: UserDirectory,
+    private val events: EventBus = EventBus(),
 ) : ForumRepository {
     override suspend fun categories(): List<Category> =
         dbQuery {
@@ -109,7 +111,9 @@ internal class ExposedForumRepository(
                 insertPost(id, authorId, body)
                 id
             } ?: return null
-        return loadThread(threadId, PageRequest(null, PageRequest.DEFAULT_LIMIT))
+        val created = loadThread(threadId, PageRequest(null, PageRequest.DEFAULT_LIMIT)) ?: return null
+        events.publish(ThreadCreated(created.id, created.title, authorId, body))
+        return created
     }
 
     override suspend fun reply(
@@ -128,10 +132,14 @@ internal class ExposedForumRepository(
                     it.update(replyCount, replyCount + 1)
                     it[lastPostAt] = CurrentTimestamp
                 }
-                null to Posts.selectAll().where { Posts.id eq postId }.single()
+                null to (Posts.selectAll().where { Posts.id eq postId }.single() to thread)
             }
         val (failure, created) = row
-        return failure ?: ReplyResult.Done(created!!.toPost(users.usernames(listOf(authorId))))
+        if (failure != null) return failure
+        val (postRow, threadRow) = created!!
+        val post = postRow.toPost(users.usernames(listOf(authorId)))
+        events.publish(PostCreated(threadId, threadRow[Threads.title], post.id, authorId, threadRow[Threads.authorId], body))
+        return ReplyResult.Done(post)
     }
 
     override suspend fun activity(userId: Long): Activity {
