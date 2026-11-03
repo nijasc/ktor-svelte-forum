@@ -55,13 +55,13 @@ class ExposedForumRepositoryTest {
             val newer = assertNotNull(forum.createThread("general", ALICE, "Newer", "b"))
             assertEquals(listOf(newer.id, older.id), forum.threads("general", FIRST_PAGE)?.items?.map { it.id })
 
-            val reply = assertNotNull(forum.reply(older.id, BOB, "Reply"))
+            val reply = assertIs<ReplyResult.Done>(forum.reply(older.id, BOB, "Reply")).post
             assertEquals("bob", reply.author)
 
             val threads = assertNotNull(forum.threads("general", FIRST_PAGE)).items
             assertEquals(listOf(older.id, newer.id), threads.map { it.id })
             assertEquals(listOf(1, 0), threads.map { it.replyCount })
-            assertNull(forum.reply(999, BOB, "Nowhere"))
+            assertEquals(ReplyResult.NotFound, forum.reply(999, BOB, "Nowhere"))
         }
 
     @Test
@@ -158,7 +158,7 @@ class ExposedForumRepositoryTest {
     fun `deleting hides the text and lowers the reply count`() =
         runBlocking {
             val thread = assertNotNull(forum.createThread("general", ALICE, "Hello", "Body"))
-            val reply = assertNotNull(forum.reply(thread.id, BOB, "Secret"))
+            val reply = assertIs<ReplyResult.Done>(forum.reply(thread.id, BOB, "Secret")).post
 
             assertEquals(PostChange.NotYours, forum.deletePost(reply.id, ALICE))
             val deleted = assertIs<PostChange.Done>(forum.deletePost(reply.id, BOB)).post

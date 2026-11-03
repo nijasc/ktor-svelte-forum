@@ -3,6 +3,7 @@ package dev.nilsschlegel.forum.forum
 import dev.nilsschlegel.forum.accounts.AuthUser
 import dev.nilsschlegel.forum.accounts.Role
 import dev.nilsschlegel.forum.accounts.SESSION_AUTH
+import dev.nilsschlegel.forum.accounts.UserDirectory
 import dev.nilsschlegel.forum.core.ApiException
 import dev.nilsschlegel.forum.core.RateLimits
 import dev.nilsschlegel.forum.core.configureRateLimits
@@ -32,6 +33,12 @@ import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+private object NoUsers : UserDirectory {
+    override suspend fun usernames(ids: Collection<Long>) = emptyMap<Long, String>()
+
+    override suspend fun idOf(username: String): Long? = null
+}
 
 private class FakeForumRepository : ForumRepository {
     private val threads = mutableListOf<ThreadDetail>()
@@ -77,13 +84,21 @@ private class FakeForumRepository : ForumRepository {
         threadId: Long,
         authorId: Long,
         body: String,
-    ): Post? {
-        val thread = threads.find { it.id == threadId } ?: return null
+    ): ReplyResult {
+        val thread = threads.find { it.id == threadId } ?: return ReplyResult.NotFound
+        if (thread.locked) return ReplyResult.Locked
         val post = Post(thread.posts.items.size + 1L, "user$authorId", body, NOW)
         threads[threads.indexOf(thread)] =
             thread.copy(replyCount = thread.replyCount + 1, posts = PostPage(thread.posts.items + post, null))
-        return post
+        return ReplyResult.Done(post)
     }
+
+    fun lock(threadId: Long) {
+        val thread = threads.single { it.id == threadId }
+        threads[threads.indexOf(thread)] = thread.copy(locked = true)
+    }
+
+    override suspend fun activity(userId: Long) = Activity(0, 0, emptyList(), emptyList())
 
     /** Adds a reply by a given user without going through the routes, so tests can set up other people's posts. */
     suspend fun seedReply(
@@ -178,7 +193,7 @@ private fun Application.forumModule(
         exception<ApiException> { call, cause -> call.respond(cause.status, cause.message) }
     }
     install(Authentication) { register(TestAuth(TestAuth.Config())) }
-    routing { forumRoutes(repository) }
+    routing { forumRoutes(repository, NoUsers) }
 }
 
 class ForumRoutesTest {
@@ -332,5 +347,21 @@ class ForumRoutesTest {
             assertEquals(HttpStatusCode.Forbidden, client.delete("/api/posts/1").status)
             assertEquals(HttpStatusCode.NoContent, client.delete("/api/posts/2").status)
             assertEquals(HttpStatusCode.NotFound, client.delete("/api/posts/2").status)
+        }
+
+    @Test
+    fun `nobody can reply to a locked thread`() =
+        testApplication {
+            val repository = FakeForumRepository()
+            forumApp(repository)
+            startThread()
+            repository.lock(1)
+            val response =
+                client.post("/api/threads/1/posts") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"body":"Late"}""")
+                }
+            assertEquals(HttpStatusCode.Locked, response.status)
+            assertTrue("locked" in response.bodyAsText())
         }
 }

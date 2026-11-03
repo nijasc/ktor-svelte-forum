@@ -1,3 +1,18 @@
+export interface Activity {
+    threadCount: number;
+    postCount: number;
+    threads: ThreadSummary[];
+    posts: ActivityPost[];
+}
+
+export interface ActivityPost {
+    id: number;
+    threadId: number;
+    threadTitle: string;
+    excerpt: string;
+    createdAt: string;
+}
+
 export interface Category {
     slug: string;
     title: string;
@@ -35,6 +50,7 @@ export interface Post {
     createdAt: string;
     editedAt?: string | null;
     deleted?: boolean;
+    hidden?: boolean;
 }
 
 export interface PostPage {
@@ -60,11 +76,14 @@ export interface ThreadDetail {
     createdAt: string;
     replyCount: number;
     posts: PostPage;
+    pinned?: boolean;
+    locked?: boolean;
 }
 
 export interface ThreadPage {
     items: ThreadSummary[];
     next?: string | null;
+    pinned?: ThreadSummary[];
 }
 
 export interface ThreadSummary {
@@ -74,4 +93,6 @@ export interface ThreadSummary {
     createdAt: string;
     replyCount: number;
     lastPostAt: string;
+    pinned?: boolean;
+    locked?: boolean;
 }

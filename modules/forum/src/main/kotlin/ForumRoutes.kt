@@ -24,19 +24,27 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 
 /** Serves the forum under `/api`: categories, threads and posts. Needs [dev.nilsschlegel.forum.accounts.accounts] installed first. */
-fun Application.forum(users: UserDirectory) {
+fun Application.forum(users: UserDirectory): ForumStaff {
     routing {
-        forumRoutes(ExposedForumRepository(users))
+        forumRoutes(ExposedForumRepository(users), users)
     }
+    return ExposedForumStaff(users)
 }
 
-internal fun Route.forumRoutes(forum: ForumRepository) {
+internal fun Route.forumRoutes(
+    forum: ForumRepository,
+    users: UserDirectory,
+) {
     route("/api") {
         get("/categories") {
             call.respond(forum.categories())
         }
         get("/categories/{slug}/threads") {
             call.respond(forum.threads(call.slug(), call.pageRequest()) ?: throw NotFoundException())
+        }
+        get("/users/{username}/activity") {
+            val userId = users.idOf(call.parameters["username"] ?: throw NotFoundException()) ?: throw NotFoundException()
+            call.respond(forum.activity(userId))
         }
         get("/threads/{id}") {
             call.respond(forum.thread(call.threadId(), call.pageRequest()) ?: throw NotFoundException())
@@ -51,8 +59,11 @@ internal fun Route.forumRoutes(forum: ForumRepository) {
                 }
                 post("/threads/{id}/posts") {
                     val new = call.receive<NewPost>()
-                    val post = forum.reply(call.threadId(), call.userId(), new.body.trim()) ?: throw NotFoundException()
-                    call.respond(HttpStatusCode.Created, post)
+                    when (val result = forum.reply(call.threadId(), call.userId(), new.body.trim())) {
+                        is ReplyResult.Done -> call.respond(HttpStatusCode.Created, result.post)
+                        ReplyResult.NotFound -> throw NotFoundException()
+                        ReplyResult.Locked -> throw ApiException(HttpStatusCode.Locked, "This thread is locked.")
+                    }
                 }
                 patch("/posts/{id}") {
                     val new = call.receive<NewPost>()

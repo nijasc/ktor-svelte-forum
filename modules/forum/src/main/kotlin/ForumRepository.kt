@@ -35,12 +35,15 @@ internal interface ForumRepository {
         body: String,
     ): ThreadDetail?
 
-    /** Adds a post to the thread, or returns null if there is no such thread. */
+    /** Adds a post to the thread. */
     suspend fun reply(
         threadId: Long,
         authorId: Long,
         body: String,
-    ): Post?
+    ): ReplyResult
+
+    /** The user's recent threads and posts that are visible to everyone. */
+    suspend fun activity(userId: Long): Activity
 
     /** Changes the text of the author's own post. */
     suspend fun editPost(
@@ -54,6 +57,17 @@ internal interface ForumRepository {
         postId: Long,
         userId: Long,
     ): PostChange
+}
+
+/** The outcome of replying to a thread. */
+internal sealed interface ReplyResult {
+    data class Done(
+        val post: Post,
+    ) : ReplyResult
+
+    data object NotFound : ReplyResult
+
+    data object Locked : ReplyResult
 }
 
 /** The outcome of editing or deleting a post. */

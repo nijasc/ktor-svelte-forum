@@ -408,6 +408,33 @@
                     }
                 }
             }
+        },
+        "/api/users/{username}/activity": {
+            "get": {
+                "summary": "",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Activity"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -490,26 +517,6 @@
                     }
                 }
             },
-            "Category": {
-                "type": "object",
-                "title": "Category",
-                "required": [
-                    "slug",
-                    "title",
-                    "description"
-                ],
-                "properties": {
-                    "slug": {
-                        "type": "string"
-                    },
-                    "title": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    }
-                }
-            },
             "ThreadSummary": {
                 "type": "object",
                 "title": "ThreadSummary",
@@ -539,6 +546,90 @@
                     },
                     "lastPostAt": {
                         "type": "string"
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    },
+                    "locked": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ActivityPost": {
+                "type": "object",
+                "title": "ActivityPost",
+                "required": [
+                    "id",
+                    "threadId",
+                    "threadTitle",
+                    "excerpt",
+                    "createdAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "threadId": {
+                        "type": "integer"
+                    },
+                    "threadTitle": {
+                        "type": "string"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Activity": {
+                "type": "object",
+                "title": "Activity",
+                "required": [
+                    "threadCount",
+                    "postCount",
+                    "threads",
+                    "posts"
+                ],
+                "properties": {
+                    "threadCount": {
+                        "type": "integer"
+                    },
+                    "postCount": {
+                        "type": "integer"
+                    },
+                    "threads": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ThreadSummary"
+                        }
+                    },
+                    "posts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ActivityPost"
+                        }
+                    }
+                }
+            },
+            "Category": {
+                "type": "object",
+                "title": "Category",
+                "required": [
+                    "slug",
+                    "title",
+                    "description"
+                ],
+                "properties": {
+                    "slug": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
                     }
                 }
             },
@@ -560,6 +651,12 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "pinned": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ThreadSummary"
+                        }
                     }
                 }
             },
@@ -592,6 +689,9 @@
                         ]
                     },
                     "deleted": {
+                        "type": "boolean"
+                    },
+                    "hidden": {
                         "type": "boolean"
                     }
                 }
@@ -650,6 +750,12 @@
                     },
                     "posts": {
                         "$ref": "#/components/schemas/PostPage"
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    },
+                    "locked": {
+                        "type": "boolean"
                     }
                 }
             },

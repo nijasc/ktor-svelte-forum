@@ -1,5 +1,5 @@
 import { ApiError, request, type RequestOptions } from './client.js';
-import type { Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, Profile, ThreadDetail, ThreadPage } from './types.js';
+import type { Activity, Category, Credentials, CurrentUser, Greeting, NewPost, NewThread, Post, Problem, Profile, ThreadDetail, ThreadPage } from './types.js';
 
 export const auth = {
     login: (body: Credentials, options?: RequestOptions) => request<CurrentUser>('POST', '/api/auth/login', { ...options, body, operation: 'auth.login' }),
@@ -30,6 +30,7 @@ export const threads = {
 
 export const users = {
     get: (username: string | number, options?: RequestOptions) => request<Profile>('GET', `/api/users/${encodeURIComponent(username)}`, { ...options, operation: 'users.get' }),
+    getActivity: (username: string | number, options?: RequestOptions) => request<Activity>('GET', `/api/users/${encodeURIComponent(username)}/activity`, { ...options, operation: 'users.getActivity' }),
 };
 
 export interface ApiErrors {
